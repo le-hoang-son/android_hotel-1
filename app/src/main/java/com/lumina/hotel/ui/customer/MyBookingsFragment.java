@@ -77,7 +77,7 @@ public class MyBookingsFragment extends Fragment implements BookingAdapter.Liste
         session = new SessionManager(requireContext());
 
         setupTabs();
-        setupRecycler();
+        setupList();
         binding.srlBookings.setOnRefreshListener(this::loadBookings);
         binding.layoutEmpty.btnEmptyAction.setOnClickListener(v -> {
             if (getActivity() instanceof BottomNavHost) {
@@ -143,9 +143,9 @@ public class MyBookingsFragment extends Fragment implements BookingAdapter.Liste
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
-    private void setupRecycler() {
+    private void setupList() {
         adapter = new BookingAdapter(this);
-        binding.rvBookings.setAdapter(adapter);
+        binding.lvBookings.setAdapter(adapter);
     }
 
     private void loadBookings() {
@@ -177,10 +177,10 @@ public class MyBookingsFragment extends Fragment implements BookingAdapter.Liste
             }
             if (match) filtered.add(item);
         }
-        adapter.submitList(filtered);
+        adapter.setData(filtered);
 
         boolean empty = filtered.isEmpty();
-        binding.rvBookings.setVisibility(empty ? View.GONE : View.VISIBLE);
+        binding.lvBookings.setVisibility(empty ? View.GONE : View.VISIBLE);
         binding.layoutEmpty.getRoot().setVisibility(empty ? View.VISIBLE : View.GONE);
         if (empty) {
             binding.layoutEmpty.tvEmptyTitle.setText(R.string.empty_bookings_title);

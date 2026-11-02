@@ -197,14 +197,11 @@
             android:layout_marginBottom="8dp"
             android:text="@string/customer_detail_recent_bookings_title" />
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvRecentBookings"
+        <LinearLayout
+            android:id="@+id/llRecentBookings"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:nestedScrollingEnabled="false"
-            android:overScrollMode="never"
-            tools:itemCount="3"
-            tools:listitem="@layout/item_latest_booking" />
+            android:orientation="vertical" />
 
         <TextView
             android:id="@+id/tvEmptyBookings"

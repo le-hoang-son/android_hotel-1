@@ -21,7 +21,7 @@ import java.util.concurrent.Executors;
  *       List&lt;RoomType&gt; data = roomTypeDao.getActiveTypes();   // luồng nền
  *       runOnUiThread(() -> {                                    // quay lại luồng UI
  *           binding.pbLoading.setVisibility(View.GONE);
- *           adapter.submitList(data);
+ *           adapter.setData(data);
  *       });
  *   });
  *

@@ -47,18 +47,19 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tlBookingStatus">
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvBookings"
+        <ListView
+            android:id="@+id/lvBookings"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:orientation="vertical"
+            android:divider="@null"
+            android:dividerHeight="0dp"
             android:paddingHorizontal="20dp"
             android:paddingTop="16dp"
             android:paddingBottom="80dp"
-            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-            tools:listitem="@layout/item_booking_card"
-            xmlns:tools="http://schemas.android.com/tools" />
+            android:scrollbars="none"
+            xmlns:tools="http://schemas.android.com/tools"
+            tools:listitem="@layout/item_booking_card" />
 
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 

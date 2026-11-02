@@ -14,7 +14,6 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.GridLayoutManager;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.chip.Chip;
@@ -77,10 +76,9 @@ public class AdminRoomFragment extends Fragment
         setupHeaderInset();
 
         adapter = new AdminRoomAdapter();
-        adapter.setOnItemClickListener((item, position) -> openStatusSheet(item));
+        adapter.setOnItemClickListener(item -> openStatusSheet(item));
         adapter.setOnRoomLongClickListener(this);
-        binding.rvRooms.setLayoutManager(new GridLayoutManager(requireContext(), 2));
-        binding.rvRooms.setAdapter(adapter);
+        binding.gvRooms.setAdapter(adapter);
 
         roomFilter = RoomFilter.load(requireContext());
 
@@ -201,7 +199,7 @@ public class AdminRoomFragment extends Fragment
     private void loadData() {
         final int token = ++loadToken;
         final RoomFilter filter = roomFilter.copy(); // chụp bản sao để luồng nền không đọc dữ liệu đang bị sửa
-        if (adapter.getItemCount() == 0) binding.pbLoading.setVisibility(View.VISIBLE);
+        if (adapter.getCount() == 0) binding.pbLoading.setVisibility(View.VISIBLE);
 
         executor.execute(() -> {
             Map<String, Integer> counts = null;
@@ -258,7 +256,7 @@ public class AdminRoomFragment extends Fragment
     }
 
     private void submitRooms(List<RoomWithType> rooms) {
-        adapter.submitList(rooms);
+        adapter.setData(rooms);
         boolean empty = rooms.isEmpty();
         if (empty) {
             boolean filtering = roomFilter.isActive();
@@ -268,7 +266,7 @@ public class AdminRoomFragment extends Fragment
                     ? R.string.admin_room_filter_empty_desc : R.string.admin_room_empty_desc);
         }
         binding.layoutEmpty.getRoot().setVisibility(empty ? View.VISIBLE : View.GONE);
-        binding.rvRooms.setVisibility(empty ? View.GONE : View.VISIBLE);
+        binding.gvRooms.setVisibility(empty ? View.GONE : View.VISIBLE);
     }
 
     private void applyChipCounts(Map<String, Integer> counts) {

@@ -306,14 +306,12 @@
                         android:layout_height="wrap_content"
                         android:text="@string/title_type_share" />
 
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/rvTypeShare"
+                    <LinearLayout
+                        android:id="@+id/containerTypeShare"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:nestedScrollingEnabled="false"
-                        tools:listitem="@layout/item_type_share"
-                        tools:itemCount="5" />
+                        android:orientation="vertical" />
                 </LinearLayout>
 
                 <!-- 6. ĐƠN MỚI NHẤT -->
@@ -349,14 +347,12 @@
                             android:text="@string/action_see_all" />
                     </RelativeLayout>
 
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/rvLatestBookings"
+                    <LinearLayout
+                        android:id="@+id/containerLatestBookings"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:nestedScrollingEnabled="false"
-                        tools:listitem="@layout/item_latest_booking"
-                        tools:itemCount="4" />
+                        android:orientation="vertical" />
                 </LinearLayout>
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>

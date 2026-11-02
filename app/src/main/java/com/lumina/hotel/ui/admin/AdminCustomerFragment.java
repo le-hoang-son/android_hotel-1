@@ -16,7 +16,6 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.google.android.material.chip.Chip;
 import com.lumina.hotel.R;
@@ -69,8 +68,7 @@ public class AdminCustomerFragment extends Fragment
         setupHeaderInset();
 
         adapter = new CustomerAdapter(this::showCustomerDetail);
-        binding.rvCustomers.setLayoutManager(new LinearLayoutManager(requireContext()));
-        binding.rvCustomers.setAdapter(adapter);
+        binding.lvCustomers.setAdapter(adapter);
 
         binding.btnFilter.setOnClickListener(v -> openFilterSheet());
 
@@ -253,11 +251,11 @@ public class AdminCustomerFragment extends Fragment
                         binding.tvEmptyMessage.setText(R.string.empty_customer_search);
                     }
                     binding.layoutEmpty.setVisibility(View.VISIBLE);
-                    binding.rvCustomers.setVisibility(View.GONE);
+                    binding.lvCustomers.setVisibility(View.GONE);
                 } else {
                     binding.layoutEmpty.setVisibility(View.GONE);
-                    binding.rvCustomers.setVisibility(View.VISIBLE);
-                    adapter.submitList(data);
+                    binding.lvCustomers.setVisibility(View.VISIBLE);
+                    adapter.setData(data);
                 }
             });
         });

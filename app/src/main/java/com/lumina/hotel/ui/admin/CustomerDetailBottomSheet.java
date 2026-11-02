@@ -9,18 +9,19 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.lumina.hotel.R;
-import com.lumina.hotel.adapter.RecentBookingMiniAdapter;
 import com.lumina.hotel.data.dao.BookingDao;
 import com.lumina.hotel.data.dao.UserDao;
 import com.lumina.hotel.databinding.BottomSheetCustomerDetailBinding;
+import com.lumina.hotel.databinding.ItemLatestBookingBinding;
+import com.lumina.hotel.model.Booking;
 import com.lumina.hotel.model.BookingWithDetail;
 import com.lumina.hotel.model.CustomerStat;
 import com.lumina.hotel.model.User;
 import com.lumina.hotel.util.AppExecutors;
+import com.lumina.hotel.util.DateUtils;
 import com.lumina.hotel.util.PriceUtils;
 
 import java.util.List;
@@ -139,17 +140,57 @@ public class CustomerDetailBottomSheet extends BottomSheetDialogFragment {
             requireActivity().runOnUiThread(() -> {
                 if (binding == null) return;
                 if (recent.isEmpty()) {
-                    binding.rvRecentBookings.setVisibility(View.GONE);
+                    binding.llRecentBookings.setVisibility(View.GONE);
                     binding.tvEmptyBookings.setVisibility(View.VISIBLE);
                 } else {
-                    binding.rvRecentBookings.setVisibility(View.VISIBLE);
+                    binding.llRecentBookings.setVisibility(View.VISIBLE);
                     binding.tvEmptyBookings.setVisibility(View.GONE);
-                    binding.rvRecentBookings.setLayoutManager(
-                            new LinearLayoutManager(requireContext()));
-                    binding.rvRecentBookings.setAdapter(new RecentBookingMiniAdapter(recent));
+                    bindRecentBookings(recent);
                 }
             });
         });
+    }
+
+    /** Vẽ 5 đơn gần nhất vào LinearLayout (thay cho RecyclerView). */
+    private void bindRecentBookings(List<BookingWithDetail> recent) {
+        binding.llRecentBookings.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(requireContext());
+
+        for (BookingWithDetail d : recent) {
+            ItemLatestBookingBinding b = ItemLatestBookingBinding.inflate(
+                    inflater, binding.llRecentBookings, false);
+
+            Booking booking = d.getBooking();
+            String typeName = d.getTypeName();
+
+            String initial = (typeName == null || typeName.trim().isEmpty())
+                    ? "?" : typeName.trim().substring(0, 1).toUpperCase();
+            b.tvGuestInitial.setText(initial);
+            b.tvGuestName.setText(typeName);
+
+            String meta = DateUtils.formatDayMonth(booking.getCheckInDate())
+                    + " → " + DateUtils.formatDayMonth(booking.getCheckOutDate())
+                    + " · " + DateUtils.nightsBetween(booking.getCheckInDate(),
+                    booking.getCheckOutDate()) + " đêm";
+            b.tvBookingMeta.setText(meta);
+
+            b.tvBookingAmount.setText(PriceUtils.formatVnd(booking.getTotalAmount()));
+            b.tvBookingStatus.setText(statusLabel(booking.getBookingStatus()));
+
+            binding.llRecentBookings.addView(b.getRoot());
+        }
+    }
+
+    private String statusLabel(String status) {
+        if (status == null) return "";
+        switch (status) {
+            case "pending":    return "Chờ xác nhận";
+            case "confirmed":  return "Đã xác nhận";
+            case "checked_in": return "Đang ở";
+            case "completed":  return "Hoàn tất";
+            case "cancelled":  return "Đã huỷ";
+            default:           return status;
+        }
     }
 
     @Override

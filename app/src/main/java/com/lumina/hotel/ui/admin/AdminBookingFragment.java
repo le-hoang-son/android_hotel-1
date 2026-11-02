@@ -15,7 +15,6 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.chip.Chip;
@@ -75,14 +74,13 @@ public class AdminBookingFragment extends Fragment implements AdminBookingAdapte
 
         adapter = new AdminBookingAdapter();
         // Bấm card (không trúng nút hành động) -> xem chi tiết đơn (chỉ xem).
-        adapter.setOnItemClickListener((item, position) -> {
+        adapter.setOnItemClickListener(item -> {
             Intent intent = new Intent(requireContext(), AdminBookingDetailActivity.class);
             intent.putExtra(IntentKeys.EXTRA_BOOKING_ID, item.getBooking().getId());
             startActivity(intent);
         });
         adapter.setOnBookingActionListener(this);
-        binding.rvBookings.setLayoutManager(new LinearLayoutManager(requireContext()));
-        binding.rvBookings.setAdapter(adapter);
+        binding.lvBookings.setAdapter(adapter);
 
         binding.layoutEmpty.btnEmptyAction.setVisibility(View.GONE);
 
@@ -226,7 +224,7 @@ public class AdminBookingFragment extends Fragment implements AdminBookingAdapte
     private void loadData() {
         final int token = ++loadToken;
         final BookingFilter filter = bookingFilter.copy(); // chụp bản sao để luồng nền không đọc dữ liệu đang bị sửa
-        if (adapter.getItemCount() == 0) binding.pbLoading.setVisibility(View.VISIBLE);
+        if (adapter.getCount() == 0) binding.pbLoading.setVisibility(View.VISIBLE);
 
         executor.execute(() -> {
             Map<String, Integer> counts = null;
@@ -280,7 +278,7 @@ public class AdminBookingFragment extends Fragment implements AdminBookingAdapte
     }
 
     private void submitBookings(List<BookingWithDetail> bookings) {
-        adapter.submitList(bookings);
+        adapter.setData(bookings);
         boolean empty = bookings.isEmpty();
         if (empty) {
             boolean filtering = bookingFilter.isActive();
@@ -290,7 +288,7 @@ public class AdminBookingFragment extends Fragment implements AdminBookingAdapte
                     ? R.string.admin_booking_filter_empty_desc : R.string.admin_booking_empty_desc);
         }
         binding.layoutEmpty.getRoot().setVisibility(empty ? View.VISIBLE : View.GONE);
-        binding.rvBookings.setVisibility(empty ? View.GONE : View.VISIBLE);
+        binding.lvBookings.setVisibility(empty ? View.GONE : View.VISIBLE);
     }
 
     private void applyChipCounts(Map<String, Integer> counts) {

@@ -1,12 +1,10 @@
 package com.lumina.hotel.adapter;
 
 import android.content.Context;
-import android.text.TextUtils;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
-
-import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.DiffUtil;
+import android.widget.BaseAdapter;
 
 import com.lumina.hotel.R;
 import com.lumina.hotel.databinding.ItemAdminRoomBinding;
@@ -14,53 +12,71 @@ import com.lumina.hotel.model.RoomWithType;
 import com.lumina.hotel.util.PriceUtils;
 import com.lumina.hotel.util.StatusUtils;
 
-/**
- * Danh sách phòng (lưới 2 cột) ở màn Quản lý phòng (admin).
- * Bấm cả card -> BottomSheet đổi trạng thái (qua setOnItemClickListener của BaseAdapter).
- * Nhấn giữ card -> xác nhận xóa (qua OnRoomLongClickListener riêng, BaseAdapter chưa hỗ trợ long-click).
- */
-public class AdminRoomAdapter extends BaseAdapter<RoomWithType, ItemAdminRoomBinding> {
+import java.util.ArrayList;
+import java.util.List;
 
-    public interface OnRoomLongClickListener {
-        void onLongClick(@NonNull RoomWithType item);
+/** Adapter đơn giản cho GridView (2 cột) ở màn Admin · Quản lý phòng. */
+public class AdminRoomAdapter extends BaseAdapter {
+
+    public interface OnItemClickListener {
+        void onItemClick(RoomWithType item);
     }
 
+    public interface OnRoomLongClickListener {
+        void onLongClick(RoomWithType item);
+    }
+
+    private final List<RoomWithType> items = new ArrayList<>();
+    private OnItemClickListener itemClickListener;
     private OnRoomLongClickListener longClickListener;
 
-    private static final DiffUtil.ItemCallback<RoomWithType> DIFF =
-            new DiffUtil.ItemCallback<RoomWithType>() {
-                @Override
-                public boolean areItemsTheSame(@NonNull RoomWithType a, @NonNull RoomWithType b) {
-                    return a.getRoom().getId() == b.getRoom().getId();
-                }
+    public void setData(List<RoomWithType> data) {
+        items.clear();
+        if (data != null) items.addAll(data);
+        notifyDataSetChanged();
+    }
 
-                @Override
-                public boolean areContentsTheSame(@NonNull RoomWithType a, @NonNull RoomWithType b) {
-                    return a.getRoom().getFloor() == b.getRoom().getFloor()
-                            && a.getBasePrice() == b.getBasePrice()
-                            && TextUtils.equals(a.getRoom().getRoomNumber(), b.getRoom().getRoomNumber())
-                            && TextUtils.equals(a.getRoom().getRoomStatus(), b.getRoom().getRoomStatus())
-                            && TextUtils.equals(a.getRoom().getNote(), b.getRoom().getNote())
-                            && TextUtils.equals(a.getTypeName(), b.getTypeName());
-                }
-            };
-
-    public AdminRoomAdapter() {
-        super(DIFF);
+    public void setOnItemClickListener(OnItemClickListener listener) {
+        this.itemClickListener = listener;
     }
 
     public void setOnRoomLongClickListener(OnRoomLongClickListener listener) {
         this.longClickListener = listener;
     }
 
-    @NonNull
     @Override
-    protected ItemAdminRoomBinding inflateBinding(@NonNull LayoutInflater inflater, @NonNull ViewGroup parent) {
-        return ItemAdminRoomBinding.inflate(inflater, parent, false);
+    public int getCount() {
+        return items.size();
     }
 
     @Override
-    protected void bind(@NonNull ItemAdminRoomBinding binding, @NonNull RoomWithType item, int position) {
+    public RoomWithType getItem(int position) {
+        return items.get(position);
+    }
+
+    @Override
+    public long getItemId(int position) {
+        return items.get(position).getRoom().getId();
+    }
+
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+        ItemAdminRoomBinding binding;
+
+        if (convertView == null) {
+            binding = ItemAdminRoomBinding.inflate(
+                    LayoutInflater.from(parent.getContext()), parent, false);
+            convertView = binding.getRoot();
+            convertView.setTag(binding);
+        } else {
+            binding = (ItemAdminRoomBinding) convertView.getTag();
+        }
+
+        bind(binding, getItem(position));
+        return convertView;
+    }
+
+    private void bind(ItemAdminRoomBinding binding, RoomWithType item) {
         Context ctx = binding.getRoot().getContext();
 
         binding.tvRoomNumber.setText(item.getRoom().getRoomNumber());
@@ -71,10 +87,11 @@ public class AdminRoomAdapter extends BaseAdapter<RoomWithType, ItemAdminRoomBin
 
         StatusUtils.applyRoomStatus(binding.tvRoomStatus, item.getRoom().getRoomStatus());
 
+        binding.getRoot().setOnClickListener(v -> {
+            if (itemClickListener != null) itemClickListener.onItemClick(item);
+        });
         binding.getRoot().setOnLongClickListener(v -> {
-            if (longClickListener != null) {
-                longClickListener.onLongClick(item);
-            }
+            if (longClickListener != null) longClickListener.onLongClick(item);
             return true;
         });
     }

@@ -5,8 +5,6 @@ import android.os.Bundle;
 import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.lumina.hotel.R;
@@ -63,7 +61,7 @@ public class RoomListActivity extends AppCompatActivity {
         ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (v, windowInsets) -> {
             Insets bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
             binding.layoutHeader.setPadding(0, bars.top, 0, 0);
-            binding.rvRoomList.setPadding(
+            binding.lvRoomList.setPadding(
                     getResources().getDimensionPixelSize(R.dimen.space_20),
                     0,
                     getResources().getDimensionPixelSize(R.dimen.space_20),
@@ -76,7 +74,7 @@ public class RoomListActivity extends AppCompatActivity {
 
         readExtras();
         setupToolbar();
-        setupRecyclerView();
+        setupListView();
         setupSortChip();
         setupQuickFilters();
 
@@ -107,7 +105,7 @@ public class RoomListActivity extends AppCompatActivity {
                 nights, 0)); // cập nhật số phòng thật sau khi tải xong
     }
 
-    private void setupRecyclerView() {
+    private void setupListView() {
         adapter = new RoomListAdapter();
         adapter.setOnItemClickListener((item, position) -> {
             Intent intent = new Intent(this, RoomDetailActivity.class);
@@ -117,15 +115,7 @@ public class RoomListActivity extends AppCompatActivity {
             intent.putExtra(IntentKeys.EXTRA_NUM_GUESTS, numGuests);
             startActivity(intent);
         });
-        binding.rvRoomList.setLayoutManager(new LinearLayoutManager(this));
-        binding.rvRoomList.setAdapter(adapter);
-        binding.rvRoomList.addItemDecoration(new RecyclerView.ItemDecoration() {
-            @Override
-            public void getItemOffsets(android.graphics.Rect outRect, View view,
-                                       RecyclerView parent, RecyclerView.State state) {
-                outRect.bottom = getResources().getDimensionPixelSize(R.dimen.space_12);
-            }
-        });
+        binding.lvRoomList.setAdapter(adapter);
     }
 
     private void setupSortChip() {
@@ -222,7 +212,7 @@ public class RoomListActivity extends AppCompatActivity {
                 break;
         }
 
-        adapter.submitList(result);
+        adapter.setData(result);
         updateSummaries(result.size());
 
         if (result.isEmpty()) {

@@ -21,7 +21,6 @@ import androidx.core.util.Pair;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.core.widget.ImageViewCompat;
 
 import com.github.mikephil.charting.charts.LineChart;
@@ -35,18 +34,20 @@ import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.google.android.material.datepicker.MaterialDatePicker;
 
 import com.lumina.hotel.R;
-import com.lumina.hotel.adapter.LatestBookingAdapter;
-import com.lumina.hotel.adapter.TypeShareAdapter;
 import com.lumina.hotel.data.dao.DashboardDao;
 import com.lumina.hotel.databinding.FragmentAdminDashboardBinding;
+import com.lumina.hotel.databinding.ItemLatestBookingBinding;
+import com.lumina.hotel.databinding.ItemTypeShareBinding;
 import com.lumina.hotel.model.BookingBrief;
 import com.lumina.hotel.model.TypeShareItem;
 import com.lumina.hotel.util.DateUtils;
 import com.lumina.hotel.util.PriceUtils;
+import com.lumina.hotel.util.StatusUtils;
 
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -75,9 +76,6 @@ public class AdminDashboardFragment extends Fragment {
     private DashboardDao dao;
     private ExecutorService executor;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-
-    private TypeShareAdapter typeShareAdapter;
-    private LatestBookingAdapter latestAdapter;
 
     private Mode mode = Mode.MONTH;
     private int lastPresetChipId;
@@ -155,17 +153,6 @@ public class AdminDashboardFragment extends Fragment {
     }
 
     private void setupLists() {
-        typeShareAdapter = new TypeShareAdapter();
-        binding.rvTypeShare.setLayoutManager(new LinearLayoutManager(requireContext()));
-        binding.rvTypeShare.setNestedScrollingEnabled(false);
-        binding.rvTypeShare.setAdapter(typeShareAdapter);
-
-        latestAdapter = new LatestBookingAdapter();
-        latestAdapter.setOnItemClickListener(item -> openBookingTab());
-        binding.rvLatestBookings.setLayoutManager(new LinearLayoutManager(requireContext()));
-        binding.rvLatestBookings.setNestedScrollingEnabled(false);
-        binding.rvLatestBookings.setAdapter(latestAdapter);
-
         binding.btnSeeAllBookings.setOnClickListener(v -> openBookingTab());
     }
 
@@ -391,8 +378,58 @@ public class AdminDashboardFragment extends Fragment {
         renderChart(d.labels, d.values);
 
         // 2 danh sách
-        typeShareAdapter.submitList(d.typeShare);
-        latestAdapter.submitList(d.latest);
+        renderTypeShare(d.typeShare);
+        renderLatestBookings(d.latest);
+    }
+
+    /** Vẽ danh sách "Tỷ trọng theo loại phòng" vào LinearLayout (thay cho RecyclerView). */
+    private void renderTypeShare(List<TypeShareItem> list) {
+        binding.containerTypeShare.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(requireContext());
+        for (TypeShareItem item : list) {
+            ItemTypeShareBinding b = ItemTypeShareBinding.inflate(
+                    inflater, binding.containerTypeShare, false);
+            b.tvTypeName.setText(item.getTypeName());
+            b.tvTypePercent.setText(getString(R.string.dash_percent, item.getPercent()));
+            b.tvTypeCount.setText(getString(R.string.dash_type_count, item.getCount()));
+            b.lpiTypeShare.setProgress(item.getPercent());
+            binding.containerTypeShare.addView(b.getRoot());
+        }
+    }
+
+    /** Vẽ danh sách "Đơn mới nhất" vào LinearLayout (thay cho RecyclerView). */
+    private void renderLatestBookings(List<BookingBrief> list) {
+        binding.containerLatestBookings.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(requireContext());
+        for (BookingBrief item : list) {
+            ItemLatestBookingBinding b = ItemLatestBookingBinding.inflate(
+                    inflater, binding.containerLatestBookings, false);
+
+            String name = item.getGuestName() == null ? "" : item.getGuestName().trim();
+            b.tvGuestName.setText(name);
+            b.tvGuestInitial.setText(initialOf(name));
+            b.tvBookingMeta.setText(getString(R.string.dash_booking_meta,
+                    item.getRoomTypeName(), item.getCheckInLabel(), item.getNumNights()));
+            b.tvBookingAmount.setText(PriceUtils.formatVnd(item.getTotalAmount()));
+
+            if (item.getStatus() == null) {
+                b.tvBookingStatus.setVisibility(View.GONE);
+            } else {
+                b.tvBookingStatus.setVisibility(View.VISIBLE);
+                StatusUtils.applyBookingStatus(b.tvBookingStatus, item.getStatus());
+            }
+
+            b.getRoot().setOnClickListener(v -> openBookingTab());
+            binding.containerLatestBookings.addView(b.getRoot());
+        }
+    }
+
+    /** Tên Việt Nam: lấy chữ cái đầu của TÊN (từ cuối), ví dụ "Nguyễn Văn An" → "A". */
+    private static String initialOf(String fullName) {
+        if (fullName.isEmpty()) return "?";
+        String[] parts = fullName.split("\\s+");
+        String last = parts[parts.length - 1];
+        return last.substring(0, 1).toUpperCase(Locale.getDefault());
     }
 
     private void renderHighlight(@Nullable Integer delta) {

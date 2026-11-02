@@ -185,17 +185,22 @@
         </HorizontalScrollView>
 
         <!-- 3. LƯỚI 2 CỘT (padding đáy 80dp để không bị bottom nav che) -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvRooms"
+        <GridView
+            android:id="@+id/gvRooms"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
             android:clipToPadding="false"
+            android:divider="@null"
+            android:horizontalSpacing="12dp"
+            android:numColumns="2"
             android:paddingHorizontal="16dp"
             android:paddingTop="4dp"
             android:paddingBottom="80dp"
-            tools:listitem="@layout/item_admin_room"
-            tools:spanCount="2" />
+            android:scrollbars="none"
+            android:stretchMode="columnWidth"
+            android:verticalSpacing="12dp"
+            tools:listitem="@layout/item_admin_room" />
     </LinearLayout>
 
     <!-- Trạng thái rỗng -->

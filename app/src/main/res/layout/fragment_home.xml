@@ -182,15 +182,21 @@
                         android:text="@string/see_all" />
                 </LinearLayout>
 
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rvFeatured"
+                <HorizontalScrollView
+                    android:id="@+id/hsvFeatured"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:clipToPadding="false"
-                    android:orientation="horizontal"
                     android:overScrollMode="never"
-                    tools:listitem="@layout/item_room_type_card_vertical" />
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:id="@+id/containerFeatured"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" />
+                </HorizontalScrollView>
 
                 <!-- Đã xem gần đây (ẩn cả khối nếu rỗng) -->
                 <LinearLayout
@@ -223,15 +229,21 @@
                             android:text="@string/see_all" />
                     </LinearLayout>
 
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/rvRecent"
+                    <HorizontalScrollView
+                        android:id="@+id/hsvRecent"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:clipToPadding="false"
-                        android:orientation="horizontal"
                         android:overScrollMode="never"
-                        tools:listitem="@layout/item_room_type_card_vertical" />
+                        android:scrollbars="none">
+
+                        <LinearLayout
+                            android:id="@+id/containerRecent"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal" />
+                    </HorizontalScrollView>
                 </LinearLayout>
 
             </LinearLayout>

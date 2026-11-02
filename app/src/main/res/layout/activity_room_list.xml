@@ -151,14 +151,17 @@
     </LinearLayout>
 
     <!-- 3. DANH SÁCH -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvRoomList"
+    <ListView
+        android:id="@+id/lvRoomList"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:clipToPadding="false"
+        android:divider="@null"
+        android:dividerHeight="0dp"
         android:paddingStart="@dimen/space_20"
         android:paddingEnd="@dimen/space_20"
         android:paddingBottom="@dimen/space_24"
+        android:scrollbars="none"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -172,19 +175,19 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="@id/rvRoomList"
-        app:layout_constraintEnd_toEndOf="@id/rvRoomList"
-        app:layout_constraintStart_toStartOf="@id/rvRoomList"
-        app:layout_constraintTop_toTopOf="@id/rvRoomList" />
+        app:layout_constraintBottom_toBottomOf="@id/lvRoomList"
+        app:layout_constraintEnd_toEndOf="@id/lvRoomList"
+        app:layout_constraintStart_toStartOf="@id/lvRoomList"
+        app:layout_constraintTop_toTopOf="@id/lvRoomList" />
 
     <ProgressBar
         android:id="@+id/pbLoading"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="@id/rvRoomList"
-        app:layout_constraintEnd_toEndOf="@id/rvRoomList"
-        app:layout_constraintStart_toStartOf="@id/rvRoomList"
-        app:layout_constraintTop_toTopOf="@id/rvRoomList" />
+        app:layout_constraintBottom_toBottomOf="@id/lvRoomList"
+        app:layout_constraintEnd_toEndOf="@id/lvRoomList"
+        app:layout_constraintStart_toStartOf="@id/lvRoomList"
+        app:layout_constraintTop_toTopOf="@id/lvRoomList" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

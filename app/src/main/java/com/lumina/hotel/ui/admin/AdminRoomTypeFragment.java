@@ -14,7 +14,6 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
@@ -64,8 +63,7 @@ public class AdminRoomTypeFragment extends Fragment
         setupHeaderInset();
 
         adapter = new AdminRoomTypeAdapter(this);
-        binding.rvRoomTypes.setLayoutManager(new LinearLayoutManager(requireContext()));
-        binding.rvRoomTypes.setAdapter(adapter);
+        binding.lvRoomTypes.setAdapter(adapter);
 
         binding.layoutEmpty.tvEmptyTitle.setText(R.string.admin_room_type_empty_title);
         binding.layoutEmpty.tvEmptyDesc.setText(R.string.admin_room_type_empty_desc);
@@ -112,7 +110,7 @@ public class AdminRoomTypeFragment extends Fragment
     private void loadData() {
         final int token = ++loadToken;
         // Chỉ hiện vòng xoay ở lần tải đầu, tránh nháy mỗi lần quay về
-        if (adapter.getItemCount() == 0) binding.pbLoading.setVisibility(View.VISIBLE);
+        if (adapter.getCount() == 0) binding.pbLoading.setVisibility(View.VISIBLE);
 
         executor.execute(() -> {
             final List<RoomType> types = new ArrayList<>();
@@ -136,11 +134,11 @@ public class AdminRoomTypeFragment extends Fragment
                 }
                 binding.tvStatTypesValue.setText(String.valueOf(stats[0]));
                 binding.tvStatRoomsValue.setText(String.valueOf(stats[1]));
-                adapter.submitList(types);
+                adapter.setData(types);
 
                 boolean empty = types.isEmpty();
                 binding.layoutEmpty.getRoot().setVisibility(empty ? View.VISIBLE : View.GONE);
-                binding.rvRoomTypes.setVisibility(empty ? View.GONE : View.VISIBLE);
+                binding.lvRoomTypes.setVisibility(empty ? View.GONE : View.VISIBLE);
             });
         });
     }

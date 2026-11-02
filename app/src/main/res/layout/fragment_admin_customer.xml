@@ -188,16 +188,18 @@
     </HorizontalScrollView>
 
     <!-- 3. DANH SÁCH -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvCustomers"
+    <ListView
+        android:id="@+id/lvCustomers"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:clipToPadding="false"
+        android:divider="@null"
+        android:dividerHeight="0dp"
         android:paddingStart="20dp"
         android:paddingEnd="20dp"
         android:paddingTop="16dp"
         android:paddingBottom="80dp"
-        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        android:scrollbars="none"
         tools:listitem="@layout/item_customer"
         app:layout_constraintTop_toBottomOf="@id/svActiveFilters"
         app:layout_constraintStart_toStartOf="parent"

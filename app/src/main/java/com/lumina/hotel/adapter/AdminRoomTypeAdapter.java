@@ -1,14 +1,10 @@
 package com.lumina.hotel.adapter;
 
-import android.text.TextUtils;
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-
-import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.DiffUtil;
-import androidx.recyclerview.widget.ListAdapter;
-import androidx.recyclerview.widget.RecyclerView;
+import android.widget.BaseAdapter;
 
 import com.bumptech.glide.Glide;
 import com.lumina.hotel.R;
@@ -16,11 +12,12 @@ import com.lumina.hotel.databinding.ItemAdminRoomTypeBinding;
 import com.lumina.hotel.model.RoomType;
 import com.lumina.hotel.util.PriceUtils;
 
-/** Danh sách loại phòng ở màn Quản lý loại phòng (admin). */
-public class AdminRoomTypeAdapter
-        extends ListAdapter<RoomType, AdminRoomTypeAdapter.ViewHolder> {
+import java.util.ArrayList;
+import java.util.List;
 
-    /** Độ mờ của loại phòng đã ngừng phục vụ (is_active = 0). */
+/** Adapter đơn giản cho ListView ở màn Admin · Quản lý loại phòng. */
+public class AdminRoomTypeAdapter extends BaseAdapter {
+
     private static final float ALPHA_INACTIVE = 0.6f;
 
     public interface OnActionListener {
@@ -28,93 +25,82 @@ public class AdminRoomTypeAdapter
         void onDelete(RoomType roomType);
     }
 
+    private final List<RoomType> items = new ArrayList<>();
     private final OnActionListener listener;
 
     public AdminRoomTypeAdapter(OnActionListener listener) {
-        super(DIFF);
         this.listener = listener;
     }
 
-    private static final DiffUtil.ItemCallback<RoomType> DIFF = new DiffUtil.ItemCallback<RoomType>() {
-        @Override
-        public boolean areItemsTheSame(@NonNull RoomType a, @NonNull RoomType b) {
-            return a.getId() == b.getId();
-        }
-
-        @Override
-        public boolean areContentsTheSame(@NonNull RoomType a, @NonNull RoomType b) {
-            return a.isActive() == b.isActive()
-                    && a.getAreaM2() == b.getAreaM2()
-                    && a.getMaxGuests() == b.getMaxGuests()
-                    && a.getBasePrice() == b.getBasePrice()
-                    && a.getTotalRooms() == b.getTotalRooms()
-                    && TextUtils.equals(a.getTypeName(), b.getTypeName())
-                    && TextUtils.equals(a.getImageUrl(), b.getImageUrl());
-        }
-    };
-
-    @NonNull
-    @Override
-    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        ItemAdminRoomTypeBinding binding = ItemAdminRoomTypeBinding.inflate(
-                LayoutInflater.from(parent.getContext()), parent, false);
-        return new ViewHolder(binding);
+    public void setData(List<RoomType> data) {
+        items.clear();
+        if (data != null) items.addAll(data);
+        notifyDataSetChanged();
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.bind(getItem(position));
+    public int getCount() {
+        return items.size();
     }
 
-    class ViewHolder extends RecyclerView.ViewHolder {
+    @Override
+    public RoomType getItem(int position) {
+        return items.get(position);
+    }
 
-        private final ItemAdminRoomTypeBinding binding;
+    @Override
+    public long getItemId(int position) {
+        return items.get(position).getId();
+    }
 
-        ViewHolder(ItemAdminRoomTypeBinding binding) {
-            super(binding.getRoot());
-            this.binding = binding;
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+        ItemAdminRoomTypeBinding binding;
 
-            binding.btnEdit.setOnClickListener(v -> {
-                int pos = getAdapterPosition();
-                if (pos != RecyclerView.NO_POSITION && listener != null) {
-                    listener.onEdit(getItem(pos));
-                }
-            });
-            binding.btnDelete.setOnClickListener(v -> {
-                int pos = getAdapterPosition();
-                if (pos != RecyclerView.NO_POSITION && listener != null) {
-                    listener.onDelete(getItem(pos));
-                }
-            });
+        if (convertView == null) {
+            binding = ItemAdminRoomTypeBinding.inflate(
+                    LayoutInflater.from(parent.getContext()), parent, false);
+            convertView = binding.getRoot();
+            convertView.setTag(binding);
+        } else {
+            binding = (ItemAdminRoomTypeBinding) convertView.getTag();
         }
 
-        void bind(RoomType t) {
-            android.content.Context ctx = binding.getRoot().getContext();
+        bind(binding, getItem(position));
+        return convertView;
+    }
 
-            binding.tvTypeName.setText(t.getTypeName());
-            binding.tvTypeMeta.setText(ctx.getString(R.string.admin_room_type_meta,
-                    t.getAreaM2(), t.getMaxGuests(), t.getTotalRooms()));
-            binding.tvTypePrice.setText(ctx.getString(R.string.admin_room_type_price_per_night,
-                    PriceUtils.formatVnd(t.getBasePrice())));
+    private void bind(ItemAdminRoomTypeBinding binding, RoomType t) {
+        Context ctx = binding.getRoot().getContext();
 
-            // Loại phòng đã tắt: mờ 0.6 + badge "Ngừng"
-            binding.tvBadgeInactive.setVisibility(t.isActive() ? View.GONE : View.VISIBLE);
-            binding.getRoot().setAlpha(t.isActive() ? 1f : ALPHA_INACTIVE);
+        binding.tvTypeName.setText(t.getTypeName());
+        binding.tvTypeMeta.setText(ctx.getString(R.string.admin_room_type_meta,
+                t.getAreaM2(), t.getMaxGuests(), t.getTotalRooms()));
+        binding.tvTypePrice.setText(ctx.getString(R.string.admin_room_type_price_per_night,
+                PriceUtils.formatVnd(t.getBasePrice())));
 
-            // Nhãn cho trình đọc màn hình: nói rõ nút thuộc loại phòng nào
-            binding.btnEdit.setContentDescription(
-                    ctx.getString(R.string.admin_room_type_cd_edit, t.getTypeName()));
-            binding.btnDelete.setContentDescription(
-                    ctx.getString(R.string.admin_room_type_cd_delete, t.getTypeName()));
+        binding.tvBadgeInactive.setVisibility(t.isActive() ? View.GONE : View.VISIBLE);
+        binding.getRoot().setAlpha(t.isActive() ? 1f : ALPHA_INACTIVE);
 
-            String url = t.getImageUrl();
-            if (url != null && !url.trim().isEmpty()) {
-                Glide.with(binding.ivRoomTypeImage).load(url).centerCrop()
-                        .into(binding.ivRoomTypeImage);
-            } else {
-                Glide.with(binding.ivRoomTypeImage).clear(binding.ivRoomTypeImage);
-                binding.ivRoomTypeImage.setImageDrawable(null); // hiện nền surface_variant
-            }
+        binding.btnEdit.setContentDescription(
+                ctx.getString(R.string.admin_room_type_cd_edit, t.getTypeName()));
+        binding.btnDelete.setContentDescription(
+                ctx.getString(R.string.admin_room_type_cd_delete, t.getTypeName()));
+
+        binding.btnEdit.setOnClickListener(v -> {
+            if (listener != null) listener.onEdit(t);
+        });
+        binding.btnDelete.setOnClickListener(v -> {
+            if (listener != null) listener.onDelete(t);
+        });
+
+        String url = t.getImageUrl();
+        if (url != null && !url.trim().isEmpty()) {
+            Glide.with(binding.ivRoomTypeImage).load(url).centerCrop()
+                    .into(binding.ivRoomTypeImage);
+        } else {
+            Glide.with(binding.ivRoomTypeImage).clear(binding.ivRoomTypeImage);
+            binding.ivRoomTypeImage.setImageDrawable(null);
         }
     }
 }

@@ -4,16 +4,15 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.snackbar.Snackbar;
 import com.lumina.hotel.R;
-import com.lumina.hotel.adapter.RoomTypeAdapter;
 import com.lumina.hotel.data.dao.RecentViewDao;
 import com.lumina.hotel.data.dao.RoomTypeDao;
 import com.lumina.hotel.data.dao.PromotionDao;
@@ -21,8 +20,10 @@ import com.lumina.hotel.model.Promotion;
 
 import java.text.SimpleDateFormat;
 import com.lumina.hotel.databinding.FragmentHomeBinding;
+import com.lumina.hotel.databinding.ItemRoomTypeCardVerticalBinding;
 import com.lumina.hotel.model.RoomType;
 import com.lumina.hotel.util.AppExecutors;
+import com.lumina.hotel.util.PriceUtils;
 import com.lumina.hotel.util.SessionManager;
 
 import java.util.Calendar;
@@ -39,8 +40,6 @@ public class HomeFragment extends Fragment {
     private RecentViewDao recentViewDao;
     private SessionManager sessionManager;
     private PromotionDao promotionDao;
-    private RoomTypeAdapter featuredAdapter;
-    private RoomTypeAdapter recentAdapter;
 
     @Nullable
     @Override
@@ -60,7 +59,6 @@ public class HomeFragment extends Fragment {
         promotionDao = new PromotionDao(requireContext());
 
         setupHeader();
-        setupRecyclerViews();
         setupClickListeners();
 
         binding.srlHome.setOnRefreshListener(this::loadAllData);
@@ -85,20 +83,6 @@ public class HomeFragment extends Fragment {
         if (fullName == null || fullName.trim().isEmpty()) return "?";
         String[] parts = fullName.trim().split("\\s+");
         return parts[parts.length - 1].substring(0, 1).toUpperCase(Locale.getDefault());
-    }
-
-    private void setupRecyclerViews() {
-        featuredAdapter = new RoomTypeAdapter();
-        binding.rvFeatured.setLayoutManager(
-                new LinearLayoutManager(requireContext(), RecyclerView.HORIZONTAL, false));
-        binding.rvFeatured.setAdapter(featuredAdapter);
-        featuredAdapter.setOnItemClickListener((item, pos) -> openRoomDetail(item));
-
-        recentAdapter = new RoomTypeAdapter();
-        binding.rvRecent.setLayoutManager(
-                new LinearLayoutManager(requireContext(), RecyclerView.HORIZONTAL, false));
-        binding.rvRecent.setAdapter(recentAdapter);
-        recentAdapter.setOnItemClickListener((item, pos) -> openRoomDetail(item));
     }
 
     private void setupClickListeners() {
@@ -131,7 +115,7 @@ public class HomeFragment extends Fragment {
         AppExecutors.io(() -> {
             List<RoomType> data = roomTypeDao.getFeatured(6);
             AppExecutors.runOnUiSafe(getActivity(), () -> {
-                featuredAdapter.submitList(data);
+                bindRoomCards(binding.containerFeatured, data);
                 binding.srlHome.setRefreshing(false);
             });
         });
@@ -142,11 +126,43 @@ public class HomeFragment extends Fragment {
         AppExecutors.io(() -> {
             List<RoomType> data = recentViewDao.getRecent(userId, 8);
             AppExecutors.runOnUiSafe(getActivity(), () -> {
-                recentAdapter.submitList(data);
+                bindRoomCards(binding.containerRecent, data);
                 binding.layoutRecentSection.setVisibility(
                         data.isEmpty() ? View.GONE : View.VISIBLE);
             });
         });
+    }
+
+    /** Tạo các card phòng và gắn vào container ngang (thay cho RecyclerView). */
+    private void bindRoomCards(LinearLayout container, List<RoomType> data) {
+        container.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(requireContext());
+
+        for (RoomType item : data) {
+            ItemRoomTypeCardVerticalBinding b =
+                    ItemRoomTypeCardVerticalBinding.inflate(inflater, container, false);
+
+            Glide.with(b.getRoot())
+                    .load(item.getImageUrl())
+                    .centerCrop()
+                    .into(b.ivRoomImage);
+
+            b.tvTypeName.setText(item.getTypeName());
+            b.tvMeta.setText(getString(R.string.room_meta_format,
+                    item.getAreaM2(), item.getMaxGuests()));
+            b.tvRating.setText(String.format(Locale.getDefault(), "%.1f", item.getAvgRating()));
+            b.tvReviewCount.setText(getString(R.string.review_count_format,
+                    item.getReviewCount()));
+            b.tvPrice.setText(PriceUtils.formatVnd(item.getBasePrice()));
+            b.tvOldPrice.setVisibility(View.GONE);
+
+            boolean isHot = item.getAvgRating() >= 4.9f;
+            b.tvBadge.setText(R.string.badge_hot);
+            b.tvBadge.setVisibility(isHot ? View.VISIBLE : View.GONE);
+
+            b.getRoot().setOnClickListener(v -> openRoomDetail(item));
+            container.addView(b.getRoot());
+        }
     }
 
     private void loadPromo() {

@@ -23,7 +23,6 @@ import com.bumptech.glide.Glide;
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.snackbar.Snackbar;
 import com.lumina.hotel.R;
-import com.lumina.hotel.adapter.ReviewAdapter;
 import com.lumina.hotel.data.dao.BookingDao;
 import com.lumina.hotel.data.dao.FavoriteDao;
 import com.lumina.hotel.data.dao.RecentViewDao;
@@ -31,6 +30,7 @@ import com.lumina.hotel.data.dao.ReviewDao;
 import com.lumina.hotel.data.dao.RoomTypeDao;
 import com.lumina.hotel.databinding.ActivityRoomDetailBinding;
 import com.lumina.hotel.databinding.ItemAmenityBinding;
+import com.lumina.hotel.databinding.ItemReviewBinding;
 import com.lumina.hotel.model.Amenity;
 import com.lumina.hotel.model.IntentKeys;
 import com.lumina.hotel.model.Review;
@@ -358,10 +358,32 @@ public class RoomDetailActivity extends AppCompatActivity {
         countView.setText(String.valueOf(count));
     }
 
+    /** Vẽ danh sách đánh giá vào LinearLayout (thay cho RecyclerView). */
     private void bindReviewList(List<Review> reviews) {
-        ReviewAdapter adapter = new ReviewAdapter();
-        binding.rvReviews.setAdapter(adapter);
-        adapter.submitList(reviews);
+        binding.llReviews.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(this);
+
+        for (Review item : reviews) {
+            ItemReviewBinding b = ItemReviewBinding.inflate(inflater, binding.llReviews, false);
+
+            String name = item.getReviewerName() == null ? "" : item.getReviewerName();
+            b.tvReviewerName.setText(name);
+            b.tvAvatar.setText(name.isEmpty() ? "?" : name.substring(0, 1).toUpperCase(Locale.ROOT));
+            b.tvReviewDate.setText(DateUtils.formatMonthYear(item.getCreatedAt()));
+            b.tvReviewComment.setText(item.getComment());
+
+            ImageView[] stars = {
+                    b.ivReviewStar1, b.ivReviewStar2, b.ivReviewStar3, b.ivReviewStar4, b.ivReviewStar5
+            };
+            int rating = item.getRating();
+            for (int i = 0; i < stars.length; i++) {
+                boolean filled = i < rating;
+                stars[i].setImageResource(filled ? R.drawable.ic_star_filled : R.drawable.ic_star);
+                stars[i].setAlpha(filled ? 1f : 0.25f);
+            }
+
+            binding.llReviews.addView(b.getRoot());
+        }
     }
 
     /* ================== YÊU THÍCH ================== */

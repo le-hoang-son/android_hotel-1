@@ -165,14 +165,17 @@
         </HorizontalScrollView>
 
         <!-- 3. DANH SÁCH ĐƠN (1 cột, padding đáy 80dp để không bị bottom nav che) -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvBookings"
+        <ListView
+            android:id="@+id/lvBookings"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
             android:clipToPadding="false"
+            android:divider="@null"
+            android:dividerHeight="0dp"
             android:paddingTop="4dp"
             android:paddingBottom="80dp"
+            android:scrollbars="none"
             tools:listitem="@layout/item_admin_booking" />
     </LinearLayout>
 
