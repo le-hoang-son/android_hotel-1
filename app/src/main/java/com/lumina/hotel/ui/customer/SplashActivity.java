@@ -9,6 +9,7 @@ import android.util.Log;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.AnimationSet;
 import android.view.animation.TranslateAnimation;
+import android.widget.LinearLayout;
 
 import androidx.activity.EdgeToEdge;
 import androidx.activity.OnBackPressedCallback;
@@ -18,7 +19,6 @@ import androidx.core.content.ContextCompat;
 
 import com.lumina.hotel.R;
 import com.lumina.hotel.data.dao.RoomTypeDao;
-import com.lumina.hotel.databinding.ActivitySplashBinding;
 import com.lumina.hotel.ui.admin.AdminMainActivity;
 import com.lumina.hotel.util.AppExecutors;
 import com.lumina.hotel.util.SessionManager;
@@ -35,7 +35,7 @@ public class SplashActivity extends AppCompatActivity {
     private static final long ANIM_DURATION_MS = 600;
     private static final float ANIM_OFFSET_DP = 12f;
 
-    private ActivitySplashBinding binding;
+    private LinearLayout llBrand;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     @Override
@@ -48,8 +48,8 @@ public class SplashActivity extends AppCompatActivity {
                 SystemBarStyle.dark(transparent),
                 SystemBarStyle.dark(transparent));
 
-        binding = ActivitySplashBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        setContentView(R.layout.activity_splash);
+        llBrand = findViewById(R.id.llBrand);
 
         blockBackButton();
         playIntroAnimation();
@@ -78,7 +78,7 @@ public class SplashActivity extends AppCompatActivity {
         set.addAnimation(slide);
         set.setDuration(ANIM_DURATION_MS);
 
-        binding.llBrand.startAnimation(set);
+        llBrand.startAnimation(set);
     }
 
     /**
@@ -123,7 +123,6 @@ public class SplashActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         handler.removeCallbacksAndMessages(null);
-        binding = null;
         super.onDestroy();
     }
 }

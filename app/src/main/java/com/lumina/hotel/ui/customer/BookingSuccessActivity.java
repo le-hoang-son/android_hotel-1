@@ -6,6 +6,10 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
@@ -17,7 +21,6 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.lumina.hotel.R;
 import com.lumina.hotel.data.dao.BookingDao;
-import com.lumina.hotel.databinding.ActivityBookingSuccessBinding;
 import com.lumina.hotel.model.Booking;
 import com.lumina.hotel.model.BookingWithDetail;
 import com.lumina.hotel.model.IntentKeys;
@@ -36,7 +39,17 @@ import java.util.Locale;
  */
 public class BookingSuccessActivity extends AppCompatActivity {
 
-    private ActivityBookingSuccessBinding binding;
+    private View rootView;
+    private TextView tvBookingCode;
+    private TextView tvPaidBadge;
+    private TextView tvRoomName;
+    private TextView tvDateRange;
+    private TextView tvGuestCheckIn;
+    private TextView tvTotalAmount;
+    private TextView tvEmailNote;
+    private Button btnViewBookings;
+    private Button btnBackHome;
+
     private BookingDao bookingDao;
     private SessionManager sessionManager;
 
@@ -48,10 +61,20 @@ public class BookingSuccessActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         super.onCreate(savedInstanceState);
-        binding = ActivityBookingSuccessBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        setContentView(R.layout.activity_booking_success);
+        rootView = ((ViewGroup) findViewById(android.R.id.content)).getChildAt(0);
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (v, insets) -> {
+        tvBookingCode = findViewById(R.id.tvBookingCode);
+        tvPaidBadge = findViewById(R.id.tvPaidBadge);
+        tvRoomName = findViewById(R.id.tvRoomName);
+        tvDateRange = findViewById(R.id.tvDateRange);
+        tvGuestCheckIn = findViewById(R.id.tvGuestCheckIn);
+        tvTotalAmount = findViewById(R.id.tvTotalAmount);
+        tvEmailNote = findViewById(R.id.tvEmailNote);
+        btnViewBookings = findViewById(R.id.btnViewBookings);
+        btnBackHome = findViewById(R.id.btnBackHome);
+
+        ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, insets) -> {
             Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(v.getPaddingLeft(), bars.top, v.getPaddingRight(), bars.bottom);
             return insets;
@@ -69,7 +92,7 @@ public class BookingSuccessActivity extends AppCompatActivity {
 
         // Hiện mã đơn ngay (đã có từ Intent) trong lúc chờ tải chi tiết đầy đủ.
         if (bookingCode != null) {
-            binding.tvBookingCode.setText("#" + bookingCode);
+            tvBookingCode.setText("#" + bookingCode);
         }
 
         bookingDao = new BookingDao(this);
@@ -83,10 +106,10 @@ public class BookingSuccessActivity extends AppCompatActivity {
 
     private void bindPaymentBadge() {
         if ("cash".equals(paymentMethod)) {
-            binding.tvPaidBadge.setText(R.string.success_status_unpaid);
-            binding.tvPaidBadge.setBackground(
+            tvPaidBadge.setText(R.string.success_status_unpaid);
+            tvPaidBadge.setBackground(
                     androidx.core.content.ContextCompat.getDrawable(this, R.drawable.bg_status_orange));
-            binding.tvPaidBadge.setTextColor(getColor(R.color.status_orange_text));
+            tvPaidBadge.setTextColor(getColor(R.color.status_orange_text));
         }
     }
 
@@ -110,34 +133,34 @@ public class BookingSuccessActivity extends AppCompatActivity {
     private void bind(BookingWithDetail d) {
         Booking b = d.getBooking();
 
-        binding.tvBookingCode.setText("#" + b.getBookingCode());
-        binding.tvRoomName.setText(d.getTypeName());
+        tvBookingCode.setText("#" + b.getBookingCode());
+        tvRoomName.setText(d.getTypeName());
 
         SimpleDateFormat df = new SimpleDateFormat("dd/MM", Locale.getDefault());
-        binding.tvDateRange.setText("📅 " + df.format(b.getCheckInDate()) + " → "
+        tvDateRange.setText("📅 " + df.format(b.getCheckInDate()) + " → "
                 + df.format(b.getCheckOutDate()) + " · "
                 + getString(R.string.night_count_format, b.getNumNights()));
 
-        binding.tvGuestCheckIn.setText("👤 " + b.getNumGuests() + " khách · Check-in 14:00");
+        tvGuestCheckIn.setText("👤 " + b.getNumGuests() + " khách · Check-in 14:00");
 
-        binding.tvTotalAmount.setText(PriceUtils.formatVnd(b.getTotalAmount()));
+        tvTotalAmount.setText(PriceUtils.formatVnd(b.getTotalAmount()));
 
-        binding.tvEmailNote.setText(getString(R.string.success_email_note, sessionManager.getEmail()));
+        tvEmailNote.setText(getString(R.string.success_email_note, sessionManager.getEmail()));
     }
 
     /* ================== CLICK ================== */
 
     private void setupClicks() {
-        binding.tvBookingCode.setOnLongClickListener(v -> {
+        tvBookingCode.setOnLongClickListener(v -> {
             copyCodeToClipboard();
             return true;
         });
-        binding.btnViewBookings.setOnClickListener(v -> goToTab(2, false));
-        binding.btnBackHome.setOnClickListener(v -> goToTab(0, true));
+        btnViewBookings.setOnClickListener(v -> goToTab(2, false));
+        btnBackHome.setOnClickListener(v -> goToTab(0, true));
     }
 
     private void copyCodeToClipboard() {
-        String text = binding.tvBookingCode.getText().toString();
+        String text = tvBookingCode.getText().toString();
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         cm.setPrimaryClip(ClipData.newPlainText(getString(R.string.success_booking_code_prefix), text));
         Toast.makeText(this, R.string.success_code_copied, Toast.LENGTH_SHORT).show();

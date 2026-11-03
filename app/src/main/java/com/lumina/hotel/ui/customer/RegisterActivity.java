@@ -7,12 +7,16 @@ import android.text.style.StyleSpan;
 import android.util.Patterns;
 import android.view.KeyEvent;
 import android.view.inputmethod.EditorInfo;
+import android.widget.CheckBox;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.widget.NestedScrollView;
 import android.content.Intent;
 import android.util.Log;
 
@@ -24,11 +28,13 @@ import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes;
 import com.google.android.gms.common.api.ApiException;
 import com.lumina.hotel.util.GoogleAuthHelper;
 
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.lumina.hotel.R;
 import com.lumina.hotel.data.DbContract;
 import com.lumina.hotel.data.dao.UserDao;
-import com.lumina.hotel.databinding.ActivityRegisterBinding;
 import com.lumina.hotel.model.User;
 import com.lumina.hotel.util.AppExecutors;
 import com.lumina.hotel.util.SessionManager;
@@ -41,7 +47,24 @@ public class RegisterActivity extends AppCompatActivity {
 
     private static final String TAG = "RegisterActivity";
 
-    private ActivityRegisterBinding binding;
+    private NestedScrollView svRegister;
+    private TextInputLayout tilFullName;
+    private TextInputEditText edtFullName;
+    private TextInputLayout tilEmail;
+    private TextInputEditText edtEmail;
+    private TextInputLayout tilPhone;
+    private TextInputEditText edtPhone;
+    private TextInputLayout tilPassword;
+    private TextInputEditText edtPassword;
+    private TextInputLayout tilConfirmPassword;
+    private TextInputEditText edtConfirmPassword;
+    private CheckBox cbTerms;
+    private TextView tvTerms;
+    private TextView btnGoLogin;
+    private TextView btnLoginLink;
+    private MaterialButton btnGoogle;
+    private MaterialButton btnRegister;
+    private ProgressBar pbLoading;
     private UserDao userDao;
     private SessionManager sessionManager;
     private GoogleAuthHelper googleAuthHelper;
@@ -51,8 +74,26 @@ public class RegisterActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
-        binding = ActivityRegisterBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        setContentView(R.layout.activity_register);
+
+        svRegister = findViewById(R.id.svRegister);
+        tilFullName = findViewById(R.id.tilFullName);
+        edtFullName = findViewById(R.id.edtFullName);
+        tilEmail = findViewById(R.id.tilEmail);
+        edtEmail = findViewById(R.id.edtEmail);
+        tilPhone = findViewById(R.id.tilPhone);
+        edtPhone = findViewById(R.id.edtPhone);
+        tilPassword = findViewById(R.id.tilPassword);
+        edtPassword = findViewById(R.id.edtPassword);
+        tilConfirmPassword = findViewById(R.id.tilConfirmPassword);
+        edtConfirmPassword = findViewById(R.id.edtConfirmPassword);
+        cbTerms = findViewById(R.id.cbTerms);
+        tvTerms = findViewById(R.id.tvTerms);
+        btnGoLogin = findViewById(R.id.btnGoLogin);
+        btnLoginLink = findViewById(R.id.btnLoginLink);
+        btnGoogle = findViewById(R.id.btnGoogle);
+        btnRegister = findViewById(R.id.btnRegister);
+        pbLoading = findViewById(R.id.pbLoading);
 
         userDao = new UserDao(this);
         sessionManager = new SessionManager(this);
@@ -68,7 +109,7 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void setupInsets() {
-        ViewCompat.setOnApplyWindowInsetsListener(binding.svRegister, (v, insets) -> {
+        ViewCompat.setOnApplyWindowInsetsListener(svRegister, (v, insets) -> {
             int bars = WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.ime();
             androidx.core.graphics.Insets i = insets.getInsets(bars);
             v.setPadding(v.getPaddingLeft(), i.top, v.getPaddingRight(), i.bottom);
@@ -81,7 +122,7 @@ public class RegisterActivity extends AppCompatActivity {
         SpannableString spannable = new SpannableString(full);
         boldPart(spannable, full, "Điều khoản sử dụng");
         boldPart(spannable, full, "Chính sách bảo mật");
-        binding.tvTerms.setText(spannable);
+        tvTerms.setText(spannable);
     }
 
     private void boldPart(SpannableString spannable, String full, String part) {
@@ -92,12 +133,12 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        binding.btnGoLogin.setOnClickListener(v -> finish());
-        binding.btnLoginLink.setOnClickListener(v -> finish());
+        btnGoLogin.setOnClickListener(v -> finish());
+        btnLoginLink.setOnClickListener(v -> finish());
 
-        binding.btnGoogle.setOnClickListener(v -> googleSignInLauncher.launch(googleAuthHelper.getSignInIntent()));
+        btnGoogle.setOnClickListener(v -> googleSignInLauncher.launch(googleAuthHelper.getSignInIntent()));
 
-        binding.edtConfirmPassword.setOnEditorActionListener((v, actionId, event) -> {
+        edtConfirmPassword.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_DONE
                     || (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
                 attemptRegister();
@@ -106,60 +147,60 @@ public class RegisterActivity extends AppCompatActivity {
             return false;
         });
 
-        binding.btnRegister.setOnClickListener(v -> attemptRegister());
+        btnRegister.setOnClickListener(v -> attemptRegister());
     }
 
     private void attemptRegister() {
         clearErrors();
 
-        String fullName = text(binding.edtFullName);
-        String email = text(binding.edtEmail);
-        String phone = text(binding.edtPhone);
-        String password = text(binding.edtPassword);
-        String confirmPassword = text(binding.edtConfirmPassword);
+        String fullName = text(edtFullName);
+        String email = text(edtEmail);
+        String phone = text(edtPhone);
+        String password = text(edtPassword);
+        String confirmPassword = text(edtConfirmPassword);
 
         if (fullName.isEmpty()) {
-            binding.tilFullName.setError(getString(R.string.error_field_required));
+            tilFullName.setError(getString(R.string.error_field_required));
             return;
         }
         if (fullName.length() < 2) {
-            binding.tilFullName.setError(getString(R.string.register_error_fullname_short));
+            tilFullName.setError(getString(R.string.register_error_fullname_short));
             return;
         }
         if (email.isEmpty()) {
-            binding.tilEmail.setError(getString(R.string.error_field_required));
+            tilEmail.setError(getString(R.string.error_field_required));
             return;
         }
         if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            binding.tilEmail.setError(getString(R.string.error_email_invalid));
+            tilEmail.setError(getString(R.string.error_email_invalid));
             return;
         }
         if (phone.isEmpty()) {
-            binding.tilPhone.setError(getString(R.string.error_field_required));
+            tilPhone.setError(getString(R.string.error_field_required));
             return;
         }
         if (!phone.matches("0\\d{9}")) {
-            binding.tilPhone.setError(getString(R.string.error_phone_invalid));
+            tilPhone.setError(getString(R.string.error_phone_invalid));
             return;
         }
         if (password.isEmpty()) {
-            binding.tilPassword.setError(getString(R.string.error_field_required));
+            tilPassword.setError(getString(R.string.error_field_required));
             return;
         }
         if (password.length() < 6) {
-            binding.tilPassword.setError(getString(R.string.error_password_too_short));
+            tilPassword.setError(getString(R.string.error_password_too_short));
             return;
         }
         if (confirmPassword.isEmpty()) {
-            binding.tilConfirmPassword.setError(getString(R.string.error_field_required));
+            tilConfirmPassword.setError(getString(R.string.error_field_required));
             return;
         }
         if (!confirmPassword.equals(password)) {
-            binding.tilConfirmPassword.setError(getString(R.string.error_password_not_match));
+            tilConfirmPassword.setError(getString(R.string.error_password_not_match));
             return;
         }
-        if (!binding.cbTerms.isChecked()) {
-            Snackbar.make(binding.getRoot(), R.string.register_error_terms_required, Snackbar.LENGTH_SHORT).show();
+        if (!cbTerms.isChecked()) {
+            Snackbar.make(svRegister, R.string.register_error_terms_required, Snackbar.LENGTH_SHORT).show();
             return;
         }
 
@@ -170,7 +211,7 @@ public class RegisterActivity extends AppCompatActivity {
             if (emailExists) {
                 AppExecutors.runOnUiSafe(this, () -> {
                     setLoading(false);
-                    binding.tilEmail.setError(getString(R.string.error_email_exists));
+                    tilEmail.setError(getString(R.string.error_email_exists));
                 });
                 return;
             }
@@ -189,7 +230,7 @@ public class RegisterActivity extends AppCompatActivity {
             AppExecutors.runOnUiSafe(this, () -> {
                 setLoading(false);
                 if (id <= 0) {
-                    Snackbar.make(binding.getRoot(), R.string.error_network, Snackbar.LENGTH_SHORT).show();
+                    Snackbar.make(svRegister, R.string.error_network, Snackbar.LENGTH_SHORT).show();
                     return;
                 }
                 user.setId((int) id);
@@ -208,7 +249,7 @@ public class RegisterActivity extends AppCompatActivity {
         } catch (ApiException e) {
             Log.e(TAG, "Google Sign-In thất bại, mã lỗi: " + e.getStatusCode(), e);
             if (e.getStatusCode() != GoogleSignInStatusCodes.SIGN_IN_CANCELLED) {
-                Snackbar.make(binding.getRoot(), R.string.error_network, Snackbar.LENGTH_LONG).show();
+                Snackbar.make(svRegister, R.string.error_network, Snackbar.LENGTH_LONG).show();
             }
             return;
         }
@@ -232,7 +273,7 @@ public class RegisterActivity extends AppCompatActivity {
             AppExecutors.runOnUiSafe(this, () -> {
                 setLoading(false);
                 if (hasError || result == null) {
-                    Snackbar.make(binding.getRoot(), R.string.error_network, Snackbar.LENGTH_LONG).show();
+                    Snackbar.make(svRegister, R.string.error_network, Snackbar.LENGTH_LONG).show();
                 } else {
                     sessionManager.saveSession(result);
                     Intent intent;
@@ -249,19 +290,19 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void clearErrors() {
-        binding.tilFullName.setError(null);
-        binding.tilEmail.setError(null);
-        binding.tilPhone.setError(null);
-        binding.tilPassword.setError(null);
-        binding.tilConfirmPassword.setError(null);
+        tilFullName.setError(null);
+        tilEmail.setError(null);
+        tilPhone.setError(null);
+        tilPassword.setError(null);
+        tilConfirmPassword.setError(null);
     }
 
     private void setLoading(boolean loading) {
-        binding.btnRegister.setEnabled(!loading);
-        binding.pbLoading.setVisibility(loading ? android.view.View.VISIBLE : android.view.View.GONE);
+        btnRegister.setEnabled(!loading);
+        pbLoading.setVisibility(loading ? android.view.View.VISIBLE : android.view.View.GONE);
     }
 
-    private String text(com.google.android.material.textfield.TextInputEditText edt) {
+    private String text(TextInputEditText edt) {
         return edt.getText() == null ? "" : edt.getText().toString().trim();
     }
 }

@@ -3,16 +3,18 @@ package com.lumina.hotel.ui.customer;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ListView;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.chip.Chip;
 import com.lumina.hotel.R;
 import com.lumina.hotel.adapter.RoomListAdapter;
 import com.lumina.hotel.data.dao.BookingDao;
 import com.lumina.hotel.data.dao.RoomTypeDao;
-import com.lumina.hotel.databinding.ActivityRoomListBinding;
-import com.lumina.hotel.databinding.BottomSheetSortBinding;
 import com.lumina.hotel.model.Amenity;
 import com.lumina.hotel.model.IntentKeys;
 import com.lumina.hotel.model.RoomType;
@@ -32,7 +34,19 @@ import androidx.core.view.WindowInsetsCompat;
 
 public class RoomListActivity extends AppCompatActivity {
 
-    private ActivityRoomListBinding binding;
+    private View layoutHeader;
+    private ListView lvRoomList;
+    private View btnBack;
+    private View btnEditSearch;
+    private TextView tvDateSummary;
+    private TextView tvResultSummary;
+    private TextView tvResultCount;
+    private Chip chipSort;
+    private Chip chipBreakfast;
+    private Chip chipAvailable;
+    private View pbLoading;
+    private View layoutEmpty;
+
     private RoomTypeDao roomTypeDao;
     private BookingDao bookingDao;
     private RoomListAdapter adapter;
@@ -55,13 +69,26 @@ public class RoomListActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        binding = ActivityRoomListBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        setContentView(R.layout.activity_room_list);
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (v, windowInsets) -> {
+        View rootView = ((ViewGroup) findViewById(android.R.id.content)).getChildAt(0);
+        layoutHeader = findViewById(R.id.layoutHeader);
+        lvRoomList = findViewById(R.id.lvRoomList);
+        btnBack = findViewById(R.id.btnBack);
+        btnEditSearch = findViewById(R.id.btnEditSearch);
+        tvDateSummary = findViewById(R.id.tvDateSummary);
+        tvResultSummary = findViewById(R.id.tvResultSummary);
+        tvResultCount = findViewById(R.id.tvResultCount);
+        chipSort = findViewById(R.id.chipSort);
+        chipBreakfast = findViewById(R.id.chipBreakfast);
+        chipAvailable = findViewById(R.id.chipAvailable);
+        pbLoading = findViewById(R.id.pbLoading);
+        layoutEmpty = findViewById(R.id.layoutEmpty);
+
+        ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, windowInsets) -> {
             Insets bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-            binding.layoutHeader.setPadding(0, bars.top, 0, 0);
-            binding.lvRoomList.setPadding(
+            layoutHeader.setPadding(0, bars.top, 0, 0);
+            lvRoomList.setPadding(
                     getResources().getDimensionPixelSize(R.dimen.space_20),
                     0,
                     getResources().getDimensionPixelSize(R.dimen.space_20),
@@ -95,13 +122,13 @@ public class RoomListActivity extends AppCompatActivity {
     }
 
     private void setupToolbar() {
-        binding.btnBack.setOnClickListener(v -> finish());
-        binding.btnEditSearch.setOnClickListener(v -> finish()); // quay lại màn Tìm kiếm
+        btnBack.setOnClickListener(v -> finish());
+        btnEditSearch.setOnClickListener(v -> finish()); // quay lại màn Tìm kiếm
 
         int nights = DateUtils.nightsBetween(checkIn, checkOut);
-        binding.tvDateSummary.setText(getString(R.string.room_list_date_summary_format,
+        tvDateSummary.setText(getString(R.string.room_list_date_summary_format,
                 DateUtils.formatDayMonth(checkIn), DateUtils.formatDayMonth(checkOut), numGuests));
-        binding.tvResultSummary.setText(getString(R.string.room_list_result_summary_format,
+        tvResultSummary.setText(getString(R.string.room_list_result_summary_format,
                 nights, 0)); // cập nhật số phòng thật sau khi tải xong
     }
 
@@ -115,39 +142,39 @@ public class RoomListActivity extends AppCompatActivity {
             intent.putExtra(IntentKeys.EXTRA_NUM_GUESTS, numGuests);
             startActivity(intent);
         });
-        binding.lvRoomList.setAdapter(adapter);
+        lvRoomList.setAdapter(adapter);
     }
 
     private void setupSortChip() {
-        binding.chipSort.setOnClickListener(v -> {
+        chipSort.setOnClickListener(v -> {
             BottomSheetDialog dialog = new BottomSheetDialog(this);
-            BottomSheetSortBinding sheet = BottomSheetSortBinding.inflate(getLayoutInflater());
-            dialog.setContentView(sheet.getRoot());
+            View sheet = getLayoutInflater().inflate(R.layout.bottom_sheet_sort, null);
+            dialog.setContentView(sheet);
 
-            sheet.rowPriceAsc.setOnClickListener(x -> chooseSort(SortMode.PRICE_ASC, R.string.sort_price_asc, dialog));
-            sheet.rowPriceDesc.setOnClickListener(x -> chooseSort(SortMode.PRICE_DESC, R.string.sort_price_desc, dialog));
-            sheet.rowRating.setOnClickListener(x -> chooseSort(SortMode.RATING, R.string.sort_rating, dialog));
-            sheet.rowPopular.setOnClickListener(x -> chooseSort(SortMode.POPULAR, R.string.sort_popular, dialog));
+            sheet.findViewById(R.id.rowPriceAsc).setOnClickListener(x -> chooseSort(SortMode.PRICE_ASC, R.string.sort_price_asc, dialog));
+            sheet.findViewById(R.id.rowPriceDesc).setOnClickListener(x -> chooseSort(SortMode.PRICE_DESC, R.string.sort_price_desc, dialog));
+            sheet.findViewById(R.id.rowRating).setOnClickListener(x -> chooseSort(SortMode.RATING, R.string.sort_rating, dialog));
+            sheet.findViewById(R.id.rowPopular).setOnClickListener(x -> chooseSort(SortMode.POPULAR, R.string.sort_popular, dialog));
             dialog.show();
         });
     }
 
     private void chooseSort(SortMode mode, int labelRes, BottomSheetDialog dialog) {
         currentSort = mode;
-        binding.chipSort.setText(labelRes);
+        chipSort.setText(labelRes);
         dialog.dismiss();
         applyFilterAndSort();
     }
 
     private void setupQuickFilters() {
         View.OnClickListener reapply = v -> applyFilterAndSort();
-        binding.chipBreakfast.setOnClickListener(reapply);
-        binding.chipAvailable.setOnClickListener(reapply);
+        chipBreakfast.setOnClickListener(reapply);
+        chipAvailable.setOnClickListener(reapply);
     }
 
     private void loadRooms() {
-        binding.pbLoading.setVisibility(View.VISIBLE);
-        binding.layoutEmpty.getRoot().setVisibility(View.GONE);
+        pbLoading.setVisibility(View.VISIBLE);
+        layoutEmpty.setVisibility(View.GONE);
 
         AppExecutors.io(() -> {
             String type = (typeFilter == null || typeFilter.equals("all")) ? null : typeFilter;
@@ -172,7 +199,7 @@ public class RoomListActivity extends AppCompatActivity {
             }
 
             AppExecutors.runOnUiSafe(this, () -> {
-                binding.pbLoading.setVisibility(View.GONE);
+                pbLoading.setVisibility(View.GONE);
                 allRooms = data;
                 soldOutIds = soldOut;
                 amenityCache = amenities;
@@ -186,10 +213,10 @@ public class RoomListActivity extends AppCompatActivity {
     private void applyFilterAndSort() {
         List<RoomType> result = new ArrayList<>(allRooms);
 
-        if (binding.chipAvailable.isChecked()) {
+        if (chipAvailable.isChecked()) {
             result.removeIf(rt -> soldOutIds.contains(rt.getId()));
         }
-        if (binding.chipBreakfast.isChecked()) {
+        if (chipBreakfast.isChecked()) {
             result.removeIf(rt -> !hasAmenity(rt.getId(), getString(R.string.amenity_breakfast)));
         }
         // chipFreeCancel: chính sách hủy miễn phí 48h áp dụng chung cho mọi phòng
@@ -216,19 +243,19 @@ public class RoomListActivity extends AppCompatActivity {
         updateSummaries(result.size());
 
         if (result.isEmpty()) {
-            binding.layoutEmpty.getRoot().setVisibility(View.VISIBLE);
+            layoutEmpty.setVisibility(View.VISIBLE);
             // ivEmpty/tvEmptyTitle/tvEmptyDesc/btnEmptyAction lấy từ layout_empty_state (PROMPT #3)
-            ((android.widget.TextView) binding.layoutEmpty.getRoot()
+            ((android.widget.TextView) layoutEmpty
                     .findViewById(R.id.tvEmptyTitle)).setText(R.string.empty_search_title);
-            ((android.widget.TextView) binding.layoutEmpty.getRoot()
+            ((android.widget.TextView) layoutEmpty
                     .findViewById(R.id.tvEmptyDesc)).setText(R.string.empty_search_desc);
-            View btnAction = binding.layoutEmpty.getRoot().findViewById(R.id.btnEmptyAction);
+            View btnAction = layoutEmpty.findViewById(R.id.btnEmptyAction);
             if (btnAction instanceof android.widget.Button) {
                 ((android.widget.Button) btnAction).setText(R.string.empty_search_action);
             }
             btnAction.setOnClickListener(v -> finish());
         } else {
-            binding.layoutEmpty.getRoot().setVisibility(View.GONE);
+            layoutEmpty.setVisibility(View.GONE);
         }
     }
 
@@ -243,7 +270,7 @@ public class RoomListActivity extends AppCompatActivity {
 
     private void updateSummaries(int count) {
         int nights = DateUtils.nightsBetween(checkIn, checkOut);
-        binding.tvResultCount.setText(getString(R.string.room_list_result_count, count));
-        binding.tvResultSummary.setText(getString(R.string.room_list_result_summary_format, nights, count));
+        tvResultCount.setText(getString(R.string.room_list_result_count, count));
+        tvResultSummary.setText(getString(R.string.room_list_result_summary_format, nights, count));
     }
 }

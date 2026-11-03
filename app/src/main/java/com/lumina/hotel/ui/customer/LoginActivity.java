@@ -8,6 +8,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.ProgressBar;
 
 import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResultLauncher;
@@ -20,11 +21,11 @@ import androidx.core.view.WindowInsetsCompat;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes;
 import com.google.android.gms.common.api.ApiException;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.lumina.hotel.data.dao.UserDao;
-import com.lumina.hotel.databinding.ActivityLoginBinding;
 import com.lumina.hotel.model.User;
 import com.lumina.hotel.ui.admin.AdminMainActivity;
 import com.lumina.hotel.util.AppExecutors;
@@ -40,7 +41,17 @@ public class LoginActivity extends AppCompatActivity {
 
     private static final String TAG = "LoginActivity";
 
-    private ActivityLoginBinding binding;
+    private View rootView;
+    private TextInputLayout tilEmail;
+    private TextInputEditText edtEmail;
+    private TextInputLayout tilPassword;
+    private TextInputEditText edtPassword;
+    private MaterialButton btnLogin;
+    private MaterialButton btnGoRegister;
+    private MaterialButton btnRegisterLink;
+    private MaterialButton btnGoogle;
+    private MaterialButton btnForgotPassword;
+    private ProgressBar pbLoading;
     private UserDao userDao;
     private GoogleAuthHelper googleAuthHelper;
     private ActivityResultLauncher<Intent> googleSignInLauncher;
@@ -49,8 +60,19 @@ public class LoginActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
-        binding = ActivityLoginBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        setContentView(R.layout.activity_login);
+        rootView = findViewById(android.R.id.content);
+
+        tilEmail = findViewById(R.id.tilEmail);
+        edtEmail = findViewById(R.id.edtEmail);
+        tilPassword = findViewById(R.id.tilPassword);
+        edtPassword = findViewById(R.id.edtPassword);
+        btnLogin = findViewById(R.id.btnLogin);
+        btnGoRegister = findViewById(R.id.btnGoRegister);
+        btnRegisterLink = findViewById(R.id.btnRegisterLink);
+        btnGoogle = findViewById(R.id.btnGoogle);
+        btnForgotPassword = findViewById(R.id.btnForgotPassword);
+        pbLoading = findViewById(R.id.pbLoading);
 
         userDao = new UserDao(getApplicationContext());
 
@@ -66,7 +88,7 @@ public class LoginActivity extends AppCompatActivity {
 
     /** Chừa chỗ cho status bar, thanh điều hướng và bàn phím (không bị che nút/ô nhập). */
     private void applyWindowInsets() {
-        ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (v, insets) -> {
+        ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, insets) -> {
             Insets bars = insets.getInsets(
                     WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.ime());
             v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
@@ -75,11 +97,11 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void setupInputs() {
-        clearErrorOnType(binding.edtEmail, binding.tilEmail);
-        clearErrorOnType(binding.edtPassword, binding.tilPassword);
+        clearErrorOnType(edtEmail, tilEmail);
+        clearErrorOnType(edtPassword, tilPassword);
 
         // Phím "Done" trên bàn phím = bấm nút Đăng nhập
-        binding.edtPassword.setOnEditorActionListener((v, actionId, event) -> {
+        edtPassword.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_DONE) {
                 attemptLogin();
                 return true;
@@ -89,34 +111,34 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void setupClicks() {
-        binding.btnLogin.setOnClickListener(v -> attemptLogin());
-        binding.btnGoRegister.setOnClickListener(v -> openRegister());
-        binding.btnRegisterLink.setOnClickListener(v -> openRegister());
+        btnLogin.setOnClickListener(v -> attemptLogin());
+        btnGoRegister.setOnClickListener(v -> openRegister());
+        btnRegisterLink.setOnClickListener(v -> openRegister());
 
-        binding.btnGoogle.setOnClickListener(v -> googleSignInLauncher.launch(googleAuthHelper.getSignInIntent()));
-        binding.btnForgotPassword.setOnClickListener(v -> showComingSoon());
+        btnGoogle.setOnClickListener(v -> googleSignInLauncher.launch(googleAuthHelper.getSignInIntent()));
+        btnForgotPassword.setOnClickListener(v -> showComingSoon());
     }
 
     // ---------------- ĐĂNG NHẬP ----------------
 
     private void attemptLogin() {
-        String account = textOf(binding.edtEmail).trim();
-        String password = textOf(binding.edtPassword);
+        String account = textOf(edtEmail).trim();
+        String password = textOf(edtPassword);
 
         boolean hasAccount = !account.isEmpty();
         boolean hasPassword = !password.isEmpty();
 
-        binding.tilEmail.setError(hasAccount
+        tilEmail.setError(hasAccount
                 ? null : getString(R.string.login_error_account_required));
-        binding.tilPassword.setError(hasPassword
+        tilPassword.setError(hasPassword
                 ? null : getString(R.string.login_error_password_required));
 
         if (!hasAccount) {
-            binding.edtEmail.requestFocus();
+            edtEmail.requestFocus();
             return;
         }
         if (!hasPassword) {
-            binding.edtPassword.requestFocus();
+            edtPassword.requestFocus();
             return;
         }
 
@@ -138,11 +160,11 @@ public class LoginActivity extends AppCompatActivity {
             AppExecutors.runOnUiSafe(this, () -> {
                 setLoading(false);
                 if (hasError) {
-                    Snackbar.make(binding.getRoot(), R.string.error_network,
+                    Snackbar.make(rootView, R.string.error_network,
                             Snackbar.LENGTH_LONG).show();
                 } else if (result == null) {
                     // Không tiết lộ trường nào sai
-                    Snackbar.make(binding.getRoot(), R.string.login_error_invalid,
+                    Snackbar.make(rootView, R.string.login_error_invalid,
                             Snackbar.LENGTH_LONG).show();
                 } else {
                     onLoginSuccess(result);
@@ -173,7 +195,7 @@ public class LoginActivity extends AppCompatActivity {
         } catch (ApiException e) {
             Log.e(TAG, "Google Sign-In thất bại, mã lỗi: " + e.getStatusCode(), e);
             if (e.getStatusCode() != GoogleSignInStatusCodes.SIGN_IN_CANCELLED) {
-                Snackbar.make(binding.getRoot(), R.string.error_network,
+                Snackbar.make(rootView, R.string.error_network,
                         Snackbar.LENGTH_LONG).show();
             }
             return;
@@ -199,7 +221,7 @@ public class LoginActivity extends AppCompatActivity {
             AppExecutors.runOnUiSafe(this, () -> {
                 setLoading(false);
                 if (hasError || result == null) {
-                    Snackbar.make(binding.getRoot(), R.string.error_network,
+                    Snackbar.make(rootView, R.string.error_network,
                             Snackbar.LENGTH_LONG).show();
                 } else {
                     onLoginSuccess(result);
@@ -215,27 +237,27 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void showComingSoon() {
-        Snackbar.make(binding.getRoot(), R.string.feature_coming_soon,
+        Snackbar.make(rootView, R.string.feature_coming_soon,
                 Snackbar.LENGTH_SHORT).show();
     }
 
     /** Hiện vòng tải và khoá các điều khiển khi đang xử lý. */
     private void setLoading(boolean loading) {
-        binding.pbLoading.setVisibility(loading ? View.VISIBLE : View.GONE);
+        pbLoading.setVisibility(loading ? View.VISIBLE : View.GONE);
         boolean enabled = !loading;
-        binding.btnLogin.setEnabled(enabled);
-        binding.btnGoogle.setEnabled(enabled);
-        binding.btnGoRegister.setEnabled(enabled);
-        binding.btnRegisterLink.setEnabled(enabled);
-        binding.btnForgotPassword.setEnabled(enabled);
-        binding.edtEmail.setEnabled(enabled);
-        binding.edtPassword.setEnabled(enabled);
+        btnLogin.setEnabled(enabled);
+        btnGoogle.setEnabled(enabled);
+        btnGoRegister.setEnabled(enabled);
+        btnRegisterLink.setEnabled(enabled);
+        btnForgotPassword.setEnabled(enabled);
+        edtEmail.setEnabled(enabled);
+        edtPassword.setEnabled(enabled);
     }
 
     private void hideKeyboard() {
         InputMethodManager imm = getSystemService(InputMethodManager.class);
         if (imm != null) {
-            imm.hideSoftInputFromWindow(binding.getRoot().getWindowToken(), 0);
+            imm.hideSoftInputFromWindow(rootView.getWindowToken(), 0);
         }
     }
 
@@ -250,11 +272,5 @@ public class LoginActivity extends AppCompatActivity {
             @Override public void onTextChanged(CharSequence s, int st, int b, int c) { }
             @Override public void afterTextChanged(Editable s) { til.setError(null); }
         });
-    }
-
-    @Override
-    protected void onDestroy() {
-        binding = null;
-        super.onDestroy();
     }
 }

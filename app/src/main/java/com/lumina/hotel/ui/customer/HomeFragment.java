@@ -4,11 +4,14 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.snackbar.Snackbar;
@@ -19,8 +22,6 @@ import com.lumina.hotel.data.dao.PromotionDao;
 import com.lumina.hotel.model.Promotion;
 
 import java.text.SimpleDateFormat;
-import com.lumina.hotel.databinding.FragmentHomeBinding;
-import com.lumina.hotel.databinding.ItemRoomTypeCardVerticalBinding;
 import com.lumina.hotel.model.RoomType;
 import com.lumina.hotel.util.AppExecutors;
 import com.lumina.hotel.util.PriceUtils;
@@ -35,7 +36,22 @@ import com.lumina.hotel.model.IntentKeys;
 /** SPEC 03 — Trang chủ. */
 public class HomeFragment extends Fragment {
 
-    private FragmentHomeBinding binding;
+    private View rootView;
+    private SwipeRefreshLayout srlHome;
+    private TextView tvGreeting;
+    private TextView tvUserName;
+    private TextView ivAvatar;
+    private View layoutSearchBox;
+    private View btnSeeAllFeatured;
+    private View btnSeeAllRecent;
+    private TextView tvPromoLabel;
+    private TextView tvPromoTitle;
+    private TextView tvPromoExpire;
+    private View cvPromo;
+    private LinearLayout containerFeatured;
+    private LinearLayout containerRecent;
+    private View layoutRecentSection;
+
     private RoomTypeDao roomTypeDao;
     private RecentViewDao recentViewDao;
     private SessionManager sessionManager;
@@ -45,13 +61,28 @@ public class HomeFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        binding = FragmentHomeBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        rootView = inflater.inflate(R.layout.fragment_home, container, false);
+        return rootView;
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        srlHome = view.findViewById(R.id.srlHome);
+        tvGreeting = view.findViewById(R.id.tvGreeting);
+        tvUserName = view.findViewById(R.id.tvUserName);
+        ivAvatar = view.findViewById(R.id.ivAvatar);
+        layoutSearchBox = view.findViewById(R.id.layoutSearchBox);
+        btnSeeAllFeatured = view.findViewById(R.id.btnSeeAllFeatured);
+        btnSeeAllRecent = view.findViewById(R.id.btnSeeAllRecent);
+        tvPromoLabel = view.findViewById(R.id.tvPromoLabel);
+        tvPromoTitle = view.findViewById(R.id.tvPromoTitle);
+        tvPromoExpire = view.findViewById(R.id.tvPromoExpire);
+        cvPromo = view.findViewById(R.id.cvPromo);
+        containerFeatured = view.findViewById(R.id.containerFeatured);
+        containerRecent = view.findViewById(R.id.containerRecent);
+        layoutRecentSection = view.findViewById(R.id.layoutRecentSection);
 
         roomTypeDao = new RoomTypeDao(requireContext());
         recentViewDao = new RecentViewDao(requireContext());
@@ -61,15 +92,15 @@ public class HomeFragment extends Fragment {
         setupHeader();
         setupClickListeners();
 
-        binding.srlHome.setOnRefreshListener(this::loadAllData);
+        srlHome.setOnRefreshListener(this::loadAllData);
         loadAllData();
     }
 
     private void setupHeader() {
-        binding.tvGreeting.setText(getGreetingByHour());
+        tvGreeting.setText(getGreetingByHour());
         String fullName = sessionManager.getFullName();
-        binding.tvUserName.setText(fullName + " ✦");
-        binding.ivAvatar.setText(getInitial(fullName));
+        tvUserName.setText(fullName + " ✦");
+        ivAvatar.setText(getInitial(fullName));
     }
 
     private String getGreetingByHour() {
@@ -86,13 +117,13 @@ public class HomeFragment extends Fragment {
     }
 
     private void setupClickListeners() {
-        binding.layoutSearchBox.setOnClickListener(v -> {
+        layoutSearchBox.setOnClickListener(v -> {
             if (getActivity() instanceof MainActivity) {
                 ((MainActivity) getActivity()).switchTab(1); // tab Tìm kiếm
             }
         });
-        binding.btnSeeAllFeatured.setOnClickListener(v -> showNotReadySnackbar());
-        binding.btnSeeAllRecent.setOnClickListener(v -> showNotReadySnackbar());
+        btnSeeAllFeatured.setOnClickListener(v -> showNotReadySnackbar());
+        btnSeeAllRecent.setOnClickListener(v -> showNotReadySnackbar());
     }
 
     private void openRoomDetail(RoomType item) {
@@ -102,7 +133,7 @@ public class HomeFragment extends Fragment {
     }
 
     private void showNotReadySnackbar() {
-        Snackbar.make(binding.getRoot(), R.string.feature_not_ready, Snackbar.LENGTH_SHORT).show();
+        Snackbar.make(rootView, R.string.feature_not_ready, Snackbar.LENGTH_SHORT).show();
     }
 
     private void loadAllData() {
@@ -115,8 +146,8 @@ public class HomeFragment extends Fragment {
         AppExecutors.io(() -> {
             List<RoomType> data = roomTypeDao.getFeatured(6);
             AppExecutors.runOnUiSafe(getActivity(), () -> {
-                bindRoomCards(binding.containerFeatured, data);
-                binding.srlHome.setRefreshing(false);
+                bindRoomCards(containerFeatured, data);
+                srlHome.setRefreshing(false);
             });
         });
     }
@@ -126,8 +157,8 @@ public class HomeFragment extends Fragment {
         AppExecutors.io(() -> {
             List<RoomType> data = recentViewDao.getRecent(userId, 8);
             AppExecutors.runOnUiSafe(getActivity(), () -> {
-                bindRoomCards(binding.containerRecent, data);
-                binding.layoutRecentSection.setVisibility(
+                bindRoomCards(containerRecent, data);
+                layoutRecentSection.setVisibility(
                         data.isEmpty() ? View.GONE : View.VISIBLE);
             });
         });
@@ -139,29 +170,37 @@ public class HomeFragment extends Fragment {
         LayoutInflater inflater = LayoutInflater.from(requireContext());
 
         for (RoomType item : data) {
-            ItemRoomTypeCardVerticalBinding b =
-                    ItemRoomTypeCardVerticalBinding.inflate(inflater, container, false);
+            View card = inflater.inflate(R.layout.item_room_type_card_vertical, container, false);
 
-            Glide.with(b.getRoot())
+            ImageView ivRoomImage = card.findViewById(R.id.ivRoomImage);
+            TextView tvTypeName = card.findViewById(R.id.tvTypeName);
+            TextView tvMeta = card.findViewById(R.id.tvMeta);
+            TextView tvRating = card.findViewById(R.id.tvRating);
+            TextView tvReviewCount = card.findViewById(R.id.tvReviewCount);
+            TextView tvPrice = card.findViewById(R.id.tvPrice);
+            TextView tvOldPrice = card.findViewById(R.id.tvOldPrice);
+            TextView tvBadge = card.findViewById(R.id.tvBadge);
+
+            Glide.with(card)
                     .load(item.getImageUrl())
                     .centerCrop()
-                    .into(b.ivRoomImage);
+                    .into(ivRoomImage);
 
-            b.tvTypeName.setText(item.getTypeName());
-            b.tvMeta.setText(getString(R.string.room_meta_format,
+            tvTypeName.setText(item.getTypeName());
+            tvMeta.setText(getString(R.string.room_meta_format,
                     item.getAreaM2(), item.getMaxGuests()));
-            b.tvRating.setText(String.format(Locale.getDefault(), "%.1f", item.getAvgRating()));
-            b.tvReviewCount.setText(getString(R.string.review_count_format,
+            tvRating.setText(String.format(Locale.getDefault(), "%.1f", item.getAvgRating()));
+            tvReviewCount.setText(getString(R.string.review_count_format,
                     item.getReviewCount()));
-            b.tvPrice.setText(PriceUtils.formatVnd(item.getBasePrice()));
-            b.tvOldPrice.setVisibility(View.GONE);
+            tvPrice.setText(PriceUtils.formatVnd(item.getBasePrice()));
+            tvOldPrice.setVisibility(View.GONE);
 
             boolean isHot = item.getAvgRating() >= 4.9f;
-            b.tvBadge.setText(R.string.badge_hot);
-            b.tvBadge.setVisibility(isHot ? View.VISIBLE : View.GONE);
+            tvBadge.setText(R.string.badge_hot);
+            tvBadge.setVisibility(isHot ? View.VISIBLE : View.GONE);
 
-            b.getRoot().setOnClickListener(v -> openRoomDetail(item));
-            container.addView(b.getRoot());
+            card.setOnClickListener(v -> openRoomDetail(item));
+            container.addView(card);
         }
     }
 
@@ -170,16 +209,16 @@ public class HomeFragment extends Fragment {
             Promotion promo = promotionDao.getCurrentBanner(System.currentTimeMillis());
             AppExecutors.runOnUiSafe(getActivity(), () -> {
                 if (promo == null) {
-                    binding.cvPromo.setVisibility(View.GONE);
+                    cvPromo.setVisibility(View.GONE);
                     return;
                 }
-                binding.cvPromo.setVisibility(View.VISIBLE);
-                binding.tvPromoLabel.setText(
+                cvPromo.setVisibility(View.VISIBLE);
+                tvPromoLabel.setText(
                         getString(R.string.promo_label_format, promo.getDiscountPercent()));
-                binding.tvPromoTitle.setText(promo.getTitle());
+                tvPromoTitle.setText(promo.getTitle());
                 String expireStr = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
                         .format(new java.util.Date(promo.getEndDate()));
-                binding.tvPromoExpire.setText(
+                tvPromoExpire.setText(
                         getString(R.string.promo_expire_format, expireStr));
             });
         });
@@ -195,6 +234,20 @@ public class HomeFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        binding = null;
+        rootView = null;
+        srlHome = null;
+        tvGreeting = null;
+        tvUserName = null;
+        ivAvatar = null;
+        layoutSearchBox = null;
+        btnSeeAllFeatured = null;
+        btnSeeAllRecent = null;
+        tvPromoLabel = null;
+        tvPromoTitle = null;
+        tvPromoExpire = null;
+        cvPromo = null;
+        containerFeatured = null;
+        containerRecent = null;
+        layoutRecentSection = null;
     }
 }

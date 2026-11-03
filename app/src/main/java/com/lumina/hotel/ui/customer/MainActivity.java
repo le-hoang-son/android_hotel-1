@@ -2,6 +2,7 @@ package com.lumina.hotel.ui.customer;
 
 import android.os.Bundle;
 import android.view.MenuItem;
+import android.view.View;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
@@ -11,8 +12,8 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.lumina.hotel.R;
-import com.lumina.hotel.databinding.ActivityMainBinding;
 import com.lumina.hotel.model.IntentKeys;
 import android.content.Intent;
 
@@ -27,16 +28,19 @@ public class MainActivity extends AppCompatActivity
             R.id.nav_home, R.id.nav_search, R.id.nav_bookings, R.id.nav_profile
     };
 
-    private ActivityMainBinding binding;
+    private View main;
+    private BottomNavigationView bnvMain;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
-        binding = ActivityMainBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        setContentView(R.layout.activity_main);
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.main, (v, insets) -> {
+        main = findViewById(R.id.main);
+        bnvMain = findViewById(R.id.bnvMain);
+
+        ViewCompat.setOnApplyWindowInsetsListener(main, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
@@ -47,11 +51,11 @@ public class MainActivity extends AppCompatActivity
 
         // Đặt tab được chọn TRƯỚC khi gắn listener để tránh add fragment 2 lần
         // (setSelectedItemId có thể hoặc không tự bắn listener tuỳ trạng thái ban đầu).
-        binding.bnvMain.setSelectedItemId(TAB_IDS[safeIndex]);
-        binding.bnvMain.setOnItemSelectedListener(this::onTabSelected);
+        bnvMain.setSelectedItemId(TAB_IDS[safeIndex]);
+        bnvMain.setOnItemSelectedListener(this::onTabSelected);
 
         if (savedInstanceState == null) {
-            onTabSelected(binding.bnvMain.getMenu().findItem(TAB_IDS[safeIndex]));
+            onTabSelected(bnvMain.getMenu().findItem(TAB_IDS[safeIndex]));
         }
     }
 
@@ -69,7 +73,7 @@ public class MainActivity extends AppCompatActivity
     /** Cho Fragment con gọi để chuyển tab bằng code (VD: bấm ô tìm kiếm giả ở Trang chủ). */
     public void switchTab(int index) {
         if (index >= 0 && index < TAB_IDS.length) {
-            binding.bnvMain.setSelectedItemId(TAB_IDS[index]);
+            bnvMain.setSelectedItemId(TAB_IDS[index]);
         }
     }
 

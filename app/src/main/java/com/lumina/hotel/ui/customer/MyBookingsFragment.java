@@ -4,6 +4,8 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.ListView;
 import android.widget.RatingBar;
 import android.widget.TextView;
 
@@ -11,6 +13,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
@@ -23,7 +26,6 @@ import com.lumina.hotel.data.DbContract.BookingStatus;
 import com.lumina.hotel.data.dao.BookingDao;
 import com.lumina.hotel.data.dao.ReviewDao;
 import com.lumina.hotel.data.dao.RoomTypeDao;
-import com.lumina.hotel.databinding.FragmentBookingsBinding;
 import com.lumina.hotel.model.BookingWithDetail;
 import com.lumina.hotel.model.IntentKeys;
 import com.lumina.hotel.ui.admin.AdminBookingDetailActivity;
@@ -49,7 +51,15 @@ public class MyBookingsFragment extends Fragment implements BookingAdapter.Liste
     private static final int TAB_COMPLETED = 3;
     private static final int TAB_CANCELLED = 4;
 
-    private FragmentBookingsBinding binding;
+    private View rootView;
+    private SwipeRefreshLayout srlBookings;
+    private TabLayout tlBookingStatus;
+    private ListView lvBookings;
+    private View layoutEmpty;
+    private TextView tvEmptyTitle;
+    private TextView tvEmptyDesc;
+    private Button btnEmptyAction;
+
     private BookingDao bookingDao;
     private ReviewDao reviewDao;
     private RoomTypeDao roomTypeDao;
@@ -64,13 +74,21 @@ public class MyBookingsFragment extends Fragment implements BookingAdapter.Liste
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        binding = FragmentBookingsBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        rootView = inflater.inflate(R.layout.fragment_bookings, container, false);
+        return rootView;
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        srlBookings = view.findViewById(R.id.srlBookings);
+        tlBookingStatus = view.findViewById(R.id.tlBookingStatus);
+        lvBookings = view.findViewById(R.id.lvBookings);
+        layoutEmpty = view.findViewById(R.id.layoutEmpty);
+        tvEmptyTitle = layoutEmpty.findViewById(R.id.tvEmptyTitle);
+        tvEmptyDesc = layoutEmpty.findViewById(R.id.tvEmptyDesc);
+        btnEmptyAction = layoutEmpty.findViewById(R.id.btnEmptyAction);
+
         bookingDao = new BookingDao(requireContext());
         reviewDao = new ReviewDao(requireContext());
         roomTypeDao = new RoomTypeDao(requireContext());
@@ -78,8 +96,8 @@ public class MyBookingsFragment extends Fragment implements BookingAdapter.Liste
 
         setupTabs();
         setupList();
-        binding.srlBookings.setOnRefreshListener(this::loadBookings);
-        binding.layoutEmpty.btnEmptyAction.setOnClickListener(v -> {
+        srlBookings.setOnRefreshListener(this::loadBookings);
+        btnEmptyAction.setOnClickListener(v -> {
             if (getActivity() instanceof BottomNavHost) {
                 ((BottomNavHost) getActivity()).goToSearchTab();
             }
@@ -92,7 +110,7 @@ public class MyBookingsFragment extends Fragment implements BookingAdapter.Liste
     public void onResume() {
         super.onResume();
         // Khách có thể vừa đặt đơn mới ở màn khác quay lại đây → nạp lại danh sách.
-        if (binding != null) loadBookings();
+        if (rootView != null) loadBookings();
     }
 
     private void setupTabs() {
@@ -104,11 +122,11 @@ public class MyBookingsFragment extends Fragment implements BookingAdapter.Liste
                 getString(R.string.bookings_tab_cancelled)
         };
         for (String label : labels) {
-            TabLayout.Tab tab = binding.tlBookingStatus.newTab();
+            TabLayout.Tab tab = tlBookingStatus.newTab();
             tab.setCustomView(buildTabChip(label));
-            binding.tlBookingStatus.addTab(tab);
+            tlBookingStatus.addTab(tab);
         }
-        binding.tlBookingStatus.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+        tlBookingStatus.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
                 currentTab = tab.getPosition();
@@ -145,19 +163,19 @@ public class MyBookingsFragment extends Fragment implements BookingAdapter.Liste
 
     private void setupList() {
         adapter = new BookingAdapter(this);
-        binding.lvBookings.setAdapter(adapter);
+        lvBookings.setAdapter(adapter);
     }
 
     private void loadBookings() {
-        binding.srlBookings.setRefreshing(true);
+        srlBookings.setRefreshing(true);
         int userId = session.getUserId();
         executor.execute(() -> {
             List<BookingWithDetail> data = bookingDao.getByUser(userId);
             if (getActivity() == null) return;
             requireActivity().runOnUiThread(() -> {
-                if (binding == null) return;
+                if (rootView == null) return;
                 allBookings = data;
-                binding.srlBookings.setRefreshing(false);
+                srlBookings.setRefreshing(false);
                 applyFilter();
             });
         });
@@ -180,13 +198,13 @@ public class MyBookingsFragment extends Fragment implements BookingAdapter.Liste
         adapter.setData(filtered);
 
         boolean empty = filtered.isEmpty();
-        binding.lvBookings.setVisibility(empty ? View.GONE : View.VISIBLE);
-        binding.layoutEmpty.getRoot().setVisibility(empty ? View.VISIBLE : View.GONE);
+        lvBookings.setVisibility(empty ? View.GONE : View.VISIBLE);
+        layoutEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
         if (empty) {
-            binding.layoutEmpty.tvEmptyTitle.setText(R.string.empty_bookings_title);
-            binding.layoutEmpty.tvEmptyDesc.setText(R.string.empty_bookings_desc);
-            binding.layoutEmpty.btnEmptyAction.setText(R.string.empty_bookings_action);
-            binding.layoutEmpty.btnEmptyAction.setVisibility(View.VISIBLE);
+            tvEmptyTitle.setText(R.string.empty_bookings_title);
+            tvEmptyDesc.setText(R.string.empty_bookings_desc);
+            btnEmptyAction.setText(R.string.empty_bookings_action);
+            btnEmptyAction.setVisibility(View.VISIBLE);
         }
     }
 
@@ -208,7 +226,7 @@ public class MyBookingsFragment extends Fragment implements BookingAdapter.Liste
                 || BookingStatus.CONFIRMED.equals(item.getBooking().getBookingStatus()))
                 && stillFuture;
         if (!cancellable) {
-            Snackbar.make(binding.getRoot(), R.string.snackbar_cancel_failed, Snackbar.LENGTH_SHORT).show();
+            Snackbar.make(rootView, R.string.snackbar_cancel_failed, Snackbar.LENGTH_SHORT).show();
             return;
         }
 
@@ -222,13 +240,13 @@ public class MyBookingsFragment extends Fragment implements BookingAdapter.Liste
                             int rows = bookingDao.cancelByCustomer(item.getBooking().getId());
                             if (getActivity() == null) return;
                             requireActivity().runOnUiThread(() -> {
-                                if (binding == null) return;
+                                if (rootView == null) return;
                                 if (rows > 0) {
-                                    Snackbar.make(binding.getRoot(), R.string.snackbar_cancel_success,
+                                    Snackbar.make(rootView, R.string.snackbar_cancel_success,
                                             Snackbar.LENGTH_SHORT).show();
                                     loadBookings();
                                 } else {
-                                    Snackbar.make(binding.getRoot(), R.string.snackbar_cancel_failed,
+                                    Snackbar.make(rootView, R.string.snackbar_cancel_failed,
                                             Snackbar.LENGTH_SHORT).show();
                                 }
                             });
@@ -252,7 +270,7 @@ public class MyBookingsFragment extends Fragment implements BookingAdapter.Liste
                 .setPositiveButton(R.string.dialog_review_submit, (d, w) -> {
                     int rating = Math.round(rbRating.getRating());
                     if (rating <= 0) {
-                        Snackbar.make(binding.getRoot(), R.string.dialog_review_error_rating,
+                        Snackbar.make(rootView, R.string.dialog_review_error_rating,
                                 Snackbar.LENGTH_SHORT).show();
                         return;
                     }
@@ -267,8 +285,8 @@ public class MyBookingsFragment extends Fragment implements BookingAdapter.Liste
                         roomTypeDao.refreshRatingCache(typeId);
                         if (getActivity() == null) return;
                         requireActivity().runOnUiThread(() -> {
-                            if (binding == null) return;
-                            Snackbar.make(binding.getRoot(), R.string.snackbar_review_success,
+                            if (rootView == null) return;
+                            Snackbar.make(rootView, R.string.snackbar_review_success,
                                     Snackbar.LENGTH_SHORT).show();
                             loadBookings();
                         });
@@ -280,6 +298,13 @@ public class MyBookingsFragment extends Fragment implements BookingAdapter.Liste
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        binding = null;
+        rootView = null;
+        srlBookings = null;
+        tlBookingStatus = null;
+        lvBookings = null;
+        layoutEmpty = null;
+        tvEmptyTitle = null;
+        tvEmptyDesc = null;
+        btnEmptyAction = null;
     }
 }

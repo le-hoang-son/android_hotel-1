@@ -7,6 +7,9 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -17,16 +20,17 @@ import androidx.fragment.app.Fragment;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.datepicker.CalendarConstraints;
 import com.google.android.material.datepicker.DateValidatorPointBackward;
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
 import com.lumina.hotel.R;
 import com.lumina.hotel.data.dao.UserDao;
-import com.lumina.hotel.databinding.DialogChangePasswordBinding;
-import com.lumina.hotel.databinding.FragmentProfileBinding;
 import com.lumina.hotel.model.User;
 import com.lumina.hotel.util.AppExecutors;
 import com.lumina.hotel.util.DateUtils;
@@ -46,7 +50,25 @@ import java.util.TimeZone;
  */
 public class ProfileFragment extends Fragment {
 
-    private FragmentProfileBinding binding;
+    private View rootView;
+    private View btnChangeAvatar;
+    private TextView tvFullName;
+    private TextView tvMemberSince;
+    private ImageView ivAvatar;
+    private TextView tvAvatarInitial;
+    private TextInputLayout tilFullName;
+    private TextInputEditText edtFullName;
+    private TextInputEditText edtEmail;
+    private TextInputLayout tilPhone;
+    private TextInputEditText edtPhone;
+    private TextInputLayout tilDob;
+    private TextInputEditText edtDob;
+    private MaterialButton btnSaveProfile;
+    private MaterialButton btnChangePassword;
+    private MaterialButton btnAboutHotel;
+    private MaterialButton btnLogout;
+    private ProgressBar pbLoading;
+
     private UserDao userDao;
     private SessionManager sessionManager;
     private User currentUser;
@@ -59,13 +81,31 @@ public class ProfileFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        binding = FragmentProfileBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        rootView = inflater.inflate(R.layout.fragment_profile, container, false);
+        return rootView;
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        btnChangeAvatar = view.findViewById(R.id.btnChangeAvatar);
+        tvFullName = view.findViewById(R.id.tvFullName);
+        tvMemberSince = view.findViewById(R.id.tvMemberSince);
+        ivAvatar = view.findViewById(R.id.ivAvatar);
+        tvAvatarInitial = view.findViewById(R.id.tvAvatarInitial);
+        tilFullName = view.findViewById(R.id.tilFullName);
+        edtFullName = view.findViewById(R.id.edtFullName);
+        edtEmail = view.findViewById(R.id.edtEmail);
+        tilPhone = view.findViewById(R.id.tilPhone);
+        edtPhone = view.findViewById(R.id.edtPhone);
+        tilDob = view.findViewById(R.id.tilDob);
+        edtDob = view.findViewById(R.id.edtDob);
+        btnSaveProfile = view.findViewById(R.id.btnSaveProfile);
+        btnChangePassword = view.findViewById(R.id.btnChangePassword);
+        btnAboutHotel = view.findViewById(R.id.btnAboutHotel);
+        btnLogout = view.findViewById(R.id.btnLogout);
+        pbLoading = view.findViewById(R.id.pbLoading);
 
         userDao = new UserDao(requireContext());
         sessionManager = new SessionManager(requireContext());
@@ -75,13 +115,13 @@ public class ProfileFragment extends Fragment {
     }
 
     private void setupListeners() {
-        binding.btnChangeAvatar.setOnClickListener(v -> pickImageLauncher.launch("image/*"));
-        binding.edtDob.setOnClickListener(v -> openDobPicker());
-        binding.btnSaveProfile.setOnClickListener(v -> onSaveClicked());
-        binding.btnChangePassword.setOnClickListener(v -> showChangePasswordDialog());
-        binding.btnAboutHotel.setOnClickListener(v ->
+        btnChangeAvatar.setOnClickListener(v -> pickImageLauncher.launch("image/*"));
+        edtDob.setOnClickListener(v -> openDobPicker());
+        btnSaveProfile.setOnClickListener(v -> onSaveClicked());
+        btnChangePassword.setOnClickListener(v -> showChangePasswordDialog());
+        btnAboutHotel.setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), AboutActivity.class)));
-        binding.btnLogout.setOnClickListener(v -> showLogoutConfirm());
+        btnLogout.setOnClickListener(v -> showLogoutConfirm());
     }
 
     // ===================== TẢI DỮ LIỆU =====================
@@ -95,16 +135,16 @@ public class ProfileFragment extends Fragment {
     }
 
     private void bindUser(User user) {
-        if (user == null || binding == null) return;
+        if (user == null || rootView == null) return;
         currentUser = user;
 
-        binding.tvFullName.setText(user.getFullName());
-        binding.tvMemberSince.setText(
+        tvFullName.setText(user.getFullName());
+        tvMemberSince.setText(
                 getString(R.string.profile_member_since, DateUtils.formatMonthYear(user.getCreatedAt())));
 
-        binding.edtFullName.setText(user.getFullName());
-        binding.edtEmail.setText(user.getEmail());
-        binding.edtPhone.setText(user.getPhone());
+        edtFullName.setText(user.getFullName());
+        edtEmail.setText(user.getEmail());
+        edtPhone.setText(user.getPhone());
 
         bindDob(user.getDob());
         bindAvatar(user);
@@ -112,23 +152,23 @@ public class ProfileFragment extends Fragment {
 
     private void bindDob(long dobValue) {
         dob = dobValue;
-        binding.edtDob.setText(dob > 0 ? DateUtils.formatFull(dob) : "");
+        edtDob.setText(dob > 0 ? DateUtils.formatFull(dob) : "");
     }
 
     private void bindAvatar(User user) {
         String avatarUrl = user.getAvatarUrl();
         if (avatarUrl == null || avatarUrl.trim().isEmpty()) {
-            binding.tvAvatarInitial.setVisibility(View.VISIBLE);
-            binding.tvAvatarInitial.setText(user.getInitial());
-            binding.ivAvatar.setImageDrawable(null);
+            tvAvatarInitial.setVisibility(View.VISIBLE);
+            tvAvatarInitial.setText(user.getInitial());
+            ivAvatar.setImageDrawable(null);
         } else {
-            binding.tvAvatarInitial.setVisibility(View.GONE);
+            tvAvatarInitial.setVisibility(View.GONE);
             Glide.with(this)
                     .load(new File(avatarUrl))
                     .diskCacheStrategy(DiskCacheStrategy.NONE)
                     .skipMemoryCache(true)
                     .error(R.drawable.ic_error)
-                    .into(binding.ivAvatar);
+                    .into(ivAvatar);
         }
     }
 
@@ -147,8 +187,8 @@ public class ProfileFragment extends Fragment {
 
         picker.addOnPositiveButtonClickListener(selection -> {
             dob = fromUtcMillis(selection);
-            binding.edtDob.setText(DateUtils.formatFull(dob));
-            binding.tilDob.setError(null);
+            edtDob.setText(DateUtils.formatFull(dob));
+            tilDob.setError(null);
         });
 
         picker.show(getParentFragmentManager(), "dob_picker");
@@ -178,32 +218,32 @@ public class ProfileFragment extends Fragment {
     private void onSaveClicked() {
         if (currentUser == null) return;
 
-        String fullName = binding.edtFullName.getText() == null ? "" :
-                binding.edtFullName.getText().toString().trim();
-        String phone = binding.edtPhone.getText() == null ? "" :
-                binding.edtPhone.getText().toString().trim();
+        String fullName = edtFullName.getText() == null ? "" :
+                edtFullName.getText().toString().trim();
+        String phone = edtPhone.getText() == null ? "" :
+                edtPhone.getText().toString().trim();
 
         boolean valid = true;
 
         if (fullName.isEmpty()) {
-            binding.tilFullName.setError(getString(R.string.profile_error_fullname_empty));
+            tilFullName.setError(getString(R.string.profile_error_fullname_empty));
             valid = false;
         } else {
-            binding.tilFullName.setError(null);
+            tilFullName.setError(null);
         }
 
         if (!phone.matches("\\d{10}")) {
-            binding.tilPhone.setError(getString(R.string.profile_error_phone_invalid));
+            tilPhone.setError(getString(R.string.profile_error_phone_invalid));
             valid = false;
         } else {
-            binding.tilPhone.setError(null);
+            tilPhone.setError(null);
         }
 
         if (dob > 0 && dob >= DateUtils.today()) {
-            binding.tilDob.setError(getString(R.string.profile_error_dob_future));
+            tilDob.setError(getString(R.string.profile_error_dob_future));
             valid = false;
         } else {
-            binding.tilDob.setError(null);
+            tilDob.setError(null);
         }
 
         if (!valid) return;
@@ -220,21 +260,21 @@ public class ProfileFragment extends Fragment {
                 currentUser.setFullName(fullName);
                 currentUser.setPhone(phone);
                 currentUser.setDob(dobToSave);
-                binding.tvFullName.setText(fullName);
-                Snackbar.make(binding.getRoot(), R.string.profile_snackbar_update_success, Snackbar.LENGTH_SHORT).show();
+                tvFullName.setText(fullName);
+                Snackbar.make(rootView, R.string.profile_snackbar_update_success, Snackbar.LENGTH_SHORT).show();
             });
         });
     }
 
     private void setLoading(boolean loading) {
-        binding.pbLoading.setVisibility(loading ? View.VISIBLE : View.GONE);
-        binding.btnSaveProfile.setEnabled(!loading);
+        pbLoading.setVisibility(loading ? View.VISIBLE : View.GONE);
+        btnSaveProfile.setEnabled(!loading);
     }
 
     // ===================== ĐỔI AVATAR =====================
 
     private void onImagePicked(Uri uri) {
-        if (uri == null || binding == null) return;
+        if (uri == null || rootView == null) return;
 
         Context appContext = requireContext().getApplicationContext();
         int userId = sessionManager.getUserId();
@@ -243,7 +283,7 @@ public class ProfileFragment extends Fragment {
             String path = copyImageToInternalStorage(appContext, uri, userId);
             if (path == null) {
                 AppExecutors.runOnUiSafe(getActivity(), () ->
-                        Snackbar.make(binding.getRoot(), R.string.error_default_message, Snackbar.LENGTH_SHORT).show());
+                        Snackbar.make(rootView, R.string.error_default_message, Snackbar.LENGTH_SHORT).show());
                 return;
             }
             userDao.updateAvatar(userId, path);
@@ -274,37 +314,43 @@ public class ProfileFragment extends Fragment {
     // ===================== ĐỔI MẬT KHẨU =====================
 
     private void showChangePasswordDialog() {
-        DialogChangePasswordBinding dialogBinding =
-                DialogChangePasswordBinding.inflate(LayoutInflater.from(requireContext()));
+        View dialogView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.dialog_change_password, null);
+        TextInputEditText edtCurrentPassword = dialogView.findViewById(R.id.edtCurrentPassword);
+        TextInputEditText edtNewPassword = dialogView.findViewById(R.id.edtNewPassword);
+        TextInputEditText edtConfirmPassword = dialogView.findViewById(R.id.edtConfirmPassword);
+        TextInputLayout tilCurrentPassword = dialogView.findViewById(R.id.tilCurrentPassword);
+        TextInputLayout tilNewPassword = dialogView.findViewById(R.id.tilNewPassword);
+        TextInputLayout tilConfirmPassword = dialogView.findViewById(R.id.tilConfirmPassword);
 
         AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.dialog_change_password_title)
-                .setView(dialogBinding.getRoot())
+                .setView(dialogView)
                 .setNegativeButton(R.string.action_cancel, null)
                 .setPositiveButton(R.string.dialog_change_password_submit, null)
                 .create();
 
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            String current = dialogBinding.edtCurrentPassword.getText() == null ? "" :
-                    dialogBinding.edtCurrentPassword.getText().toString();
-            String newPass = dialogBinding.edtNewPassword.getText() == null ? "" :
-                    dialogBinding.edtNewPassword.getText().toString();
-            String confirm = dialogBinding.edtConfirmPassword.getText() == null ? "" :
-                    dialogBinding.edtConfirmPassword.getText().toString();
+            String current = edtCurrentPassword.getText() == null ? "" :
+                    edtCurrentPassword.getText().toString();
+            String newPass = edtNewPassword.getText() == null ? "" :
+                    edtNewPassword.getText().toString();
+            String confirm = edtConfirmPassword.getText() == null ? "" :
+                    edtConfirmPassword.getText().toString();
 
             boolean valid = true;
 
             if (newPass.length() < 6) {
-                dialogBinding.tilNewPassword.setError(getString(R.string.dialog_change_password_error_new_short));
+                tilNewPassword.setError(getString(R.string.dialog_change_password_error_new_short));
                 valid = false;
             } else {
-                dialogBinding.tilNewPassword.setError(null);
+                tilNewPassword.setError(null);
             }
             if (!newPass.equals(confirm)) {
-                dialogBinding.tilConfirmPassword.setError(getString(R.string.dialog_change_password_error_confirm_mismatch));
+                tilConfirmPassword.setError(getString(R.string.dialog_change_password_error_confirm_mismatch));
                 valid = false;
             } else {
-                dialogBinding.tilConfirmPassword.setError(null);
+                tilConfirmPassword.setError(null);
             }
 
             if (!valid) return;
@@ -314,10 +360,10 @@ public class ProfileFragment extends Fragment {
                 int rows = userDao.updatePassword(userId, current, newPass);
                 AppExecutors.runOnUiSafe(getActivity(), () -> {
                     if (rows > 0) {
-                        Snackbar.make(binding.getRoot(), R.string.snackbar_change_password_success, Snackbar.LENGTH_SHORT).show();
+                        Snackbar.make(rootView, R.string.snackbar_change_password_success, Snackbar.LENGTH_SHORT).show();
                         dialog.dismiss();
                     } else {
-                        dialogBinding.tilCurrentPassword.setError(
+                        tilCurrentPassword.setError(
                                 getString(R.string.dialog_change_password_error_current_wrong));
                     }
                 });
@@ -349,6 +395,23 @@ public class ProfileFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        binding = null;
+        rootView = null;
+        btnChangeAvatar = null;
+        tvFullName = null;
+        tvMemberSince = null;
+        ivAvatar = null;
+        tvAvatarInitial = null;
+        tilFullName = null;
+        edtFullName = null;
+        edtEmail = null;
+        tilPhone = null;
+        edtPhone = null;
+        tilDob = null;
+        edtDob = null;
+        btnSaveProfile = null;
+        btnChangePassword = null;
+        btnAboutHotel = null;
+        btnLogout = null;
+        pbLoading = null;
     }
 }

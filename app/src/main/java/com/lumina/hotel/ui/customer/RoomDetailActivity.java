@@ -5,8 +5,14 @@ import androidx.core.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.GridLayout;
+import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.datepicker.CalendarConstraints;
 import com.google.android.material.datepicker.DateValidatorPointForward;
 
@@ -16,6 +22,7 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
@@ -28,9 +35,6 @@ import com.lumina.hotel.data.dao.FavoriteDao;
 import com.lumina.hotel.data.dao.RecentViewDao;
 import com.lumina.hotel.data.dao.ReviewDao;
 import com.lumina.hotel.data.dao.RoomTypeDao;
-import com.lumina.hotel.databinding.ActivityRoomDetailBinding;
-import com.lumina.hotel.databinding.ItemAmenityBinding;
-import com.lumina.hotel.databinding.ItemReviewBinding;
 import com.lumina.hotel.model.Amenity;
 import com.lumina.hotel.model.IntentKeys;
 import com.lumina.hotel.model.Review;
@@ -52,7 +56,43 @@ import android.content.Intent;
 
 public class RoomDetailActivity extends AppCompatActivity {
 
-    private ActivityRoomDetailBinding binding;
+    private View rootView;
+
+    private TextView tvRoomName;
+    private TextView tvTypeBadge;
+    private TextView tvRating;
+    private TextView tvReviewCount;
+    private TextView tvAreaFloor;
+    private TextView tvPrice;
+    private TextView tvBottomPrice;
+    private TextView tvDescription;
+    private TextView tvMaxGuest;
+    private TextView btnExpandDesc;
+    private ViewPager2 vpImages;
+    private LinearLayout layoutDotIndicator;
+    private GridLayout glAmenities;
+    private TextView tvAvgRating;
+    private TextView tvTotalReviews;
+    private LinearLayout layoutStars;
+    private ProgressBar pbStar5;
+    private TextView tvStar5Count;
+    private ProgressBar pbStar4;
+    private TextView tvStar4Count;
+    private ProgressBar pbStar3;
+    private TextView tvStar3Count;
+    private ProgressBar pbStar2;
+    private TextView tvStar2Count;
+    private ProgressBar pbStar1;
+    private TextView tvStar1Count;
+    private LinearLayout llReviews;
+    private ImageButton btnFavorite;
+    private ImageButton btnBack;
+    private MaterialButton btnBookNow;
+    private TextView tvInactiveNote;
+    private TextView btnSeeAllReviews;
+    private NestedScrollView svContent;
+    private View layoutTopBar;
+    private View layoutBottomBar;
 
     private RoomTypeDao roomTypeDao;
     private ReviewDao reviewDao;
@@ -74,8 +114,44 @@ public class RoomDetailActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         super.onCreate(savedInstanceState);
-        binding = ActivityRoomDetailBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        setContentView(R.layout.activity_room_detail);
+        rootView = findViewById(android.R.id.content);
+
+        tvRoomName = findViewById(R.id.tvRoomName);
+        tvTypeBadge = findViewById(R.id.tvTypeBadge);
+        tvRating = findViewById(R.id.tvRating);
+        tvReviewCount = findViewById(R.id.tvReviewCount);
+        tvAreaFloor = findViewById(R.id.tvAreaFloor);
+        tvPrice = findViewById(R.id.tvPrice);
+        tvBottomPrice = findViewById(R.id.tvBottomPrice);
+        tvDescription = findViewById(R.id.tvDescription);
+        tvMaxGuest = findViewById(R.id.tvMaxGuest);
+        btnExpandDesc = findViewById(R.id.btnExpandDesc);
+        vpImages = findViewById(R.id.vpImages);
+        layoutDotIndicator = findViewById(R.id.layoutDotIndicator);
+        glAmenities = findViewById(R.id.glAmenities);
+        tvAvgRating = findViewById(R.id.tvAvgRating);
+        tvTotalReviews = findViewById(R.id.tvTotalReviews);
+        layoutStars = findViewById(R.id.layoutStars);
+        pbStar5 = findViewById(R.id.pbStar5);
+        tvStar5Count = findViewById(R.id.tvStar5Count);
+        pbStar4 = findViewById(R.id.pbStar4);
+        tvStar4Count = findViewById(R.id.tvStar4Count);
+        pbStar3 = findViewById(R.id.pbStar3);
+        tvStar3Count = findViewById(R.id.tvStar3Count);
+        pbStar2 = findViewById(R.id.pbStar2);
+        tvStar2Count = findViewById(R.id.tvStar2Count);
+        pbStar1 = findViewById(R.id.pbStar1);
+        tvStar1Count = findViewById(R.id.tvStar1Count);
+        llReviews = findViewById(R.id.llReviews);
+        btnFavorite = findViewById(R.id.btnFavorite);
+        btnBack = findViewById(R.id.btnBack);
+        btnBookNow = findViewById(R.id.btnBookNow);
+        tvInactiveNote = findViewById(R.id.tvInactiveNote);
+        btnSeeAllReviews = findViewById(R.id.btnSeeAllReviews);
+        svContent = findViewById(R.id.svContent);
+        layoutTopBar = findViewById(R.id.layoutTopBar);
+        layoutBottomBar = findViewById(R.id.layoutBottomBar);
 
         typeId = getIntent().getIntExtra(IntentKeys.EXTRA_ROOM_TYPE_ID, -1);
         if (typeId <= 0) {
@@ -102,25 +178,25 @@ public class RoomDetailActivity extends AppCompatActivity {
     /* ================== INSETS ================== */
 
     private void setupInsets() {
-        ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (v, insets) -> {
+        ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, insets) -> {
             Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
 
-            binding.layoutTopBar.setPadding(
-                    binding.layoutTopBar.getPaddingLeft(),
+            layoutTopBar.setPadding(
+                    layoutTopBar.getPaddingLeft(),
                     bars.top + dp(8),
-                    binding.layoutTopBar.getPaddingRight(),
-                    binding.layoutTopBar.getPaddingBottom());
+                    layoutTopBar.getPaddingRight(),
+                    layoutTopBar.getPaddingBottom());
 
-            binding.layoutBottomBar.setPadding(
-                    binding.layoutBottomBar.getPaddingLeft(),
-                    binding.layoutBottomBar.getPaddingTop(),
-                    binding.layoutBottomBar.getPaddingRight(),
-                    bars.bottom > 0 ? bars.bottom : binding.layoutBottomBar.getPaddingBottom());
+            layoutBottomBar.setPadding(
+                    layoutBottomBar.getPaddingLeft(),
+                    layoutBottomBar.getPaddingTop(),
+                    layoutBottomBar.getPaddingRight(),
+                    bars.bottom > 0 ? bars.bottom : layoutBottomBar.getPaddingBottom());
 
-            binding.svContent.setPadding(
-                    binding.svContent.getPaddingLeft(),
-                    binding.svContent.getPaddingTop(),
-                    binding.svContent.getPaddingRight(),
+            svContent.setPadding(
+                    svContent.getPaddingLeft(),
+                    svContent.getPaddingTop(),
+                    svContent.getPaddingRight(),
                     dp(88) + bars.bottom);
 
             return insets;
@@ -177,46 +253,46 @@ public class RoomDetailActivity extends AppCompatActivity {
     /* ================== KHỐI THÔNG TIN PHÒNG ================== */
 
     private void bindRoomInfo(RoomType t) {
-        binding.tvRoomName.setText(t.getTypeName());
+        tvRoomName.setText(t.getTypeName());
 
         String firstWord = t.getTypeName() == null ? "" : t.getTypeName().trim().split(" ")[0];
-        binding.tvTypeBadge.setText(firstWord.toUpperCase(Locale.getDefault()));
+        tvTypeBadge.setText(firstWord.toUpperCase(Locale.getDefault()));
 
-        binding.tvRating.setText(String.format(Locale.getDefault(), "%.1f", t.getAvgRating()));
-        binding.tvReviewCount.setText(
+        tvRating.setText(String.format(Locale.getDefault(), "%.1f", t.getAvgRating()));
+        tvReviewCount.setText(
                 getString(R.string.room_detail_review_count_format, t.getReviewCount()));
 
-        binding.tvAreaFloor.setText(getString(R.string.room_detail_area_guests,
+        tvAreaFloor.setText(getString(R.string.room_detail_area_guests,
                 t.getAreaM2(), t.getMaxGuests()));
 
-        binding.tvPrice.setText(PriceUtils.formatVnd(t.getBasePrice()));
-        binding.tvBottomPrice.setText(PriceUtils.formatShort(t.getBasePrice()));
+        tvPrice.setText(PriceUtils.formatVnd(t.getBasePrice()));
+        tvBottomPrice.setText(PriceUtils.formatShort(t.getBasePrice()));
 
-        binding.tvDescription.setText(t.getDescription());
-        binding.tvMaxGuest.setText(getString(R.string.room_detail_max_guest_format, t.getMaxGuests()));
+        tvDescription.setText(t.getDescription());
+        tvMaxGuest.setText(getString(R.string.room_detail_max_guest_format, t.getMaxGuests()));
 
         setupDescriptionExpand();
     }
 
     private void setupDescriptionExpand() {
         // Mặc định gập 3 dòng và có dấu "…" (nếu chưa mở rộng)
-        binding.tvDescription.setEllipsize(TextUtils.TruncateAt.END);
-        binding.tvDescription.setMaxLines(descExpanded ? Integer.MAX_VALUE : 3);
-        binding.btnExpandDesc.setText(descExpanded
+        tvDescription.setEllipsize(TextUtils.TruncateAt.END);
+        tvDescription.setMaxLines(descExpanded ? Integer.MAX_VALUE : 3);
+        btnExpandDesc.setText(descExpanded
                 ? R.string.room_detail_collapse : R.string.room_detail_expand);
 
-        binding.tvDescription.post(() -> {
-            Layout layout = binding.tvDescription.getLayout();
+        tvDescription.post(() -> {
+            Layout layout = tvDescription.getLayout();
             boolean truncated = layout != null
                     && layout.getLineCount() > 0
                     && layout.getEllipsisCount(layout.getLineCount() - 1) > 0;
-            binding.btnExpandDesc.setVisibility(truncated || descExpanded ? View.VISIBLE : View.GONE);
+            btnExpandDesc.setVisibility(truncated || descExpanded ? View.VISIBLE : View.GONE);
         });
 
-        binding.btnExpandDesc.setOnClickListener(v -> {
+        btnExpandDesc.setOnClickListener(v -> {
             descExpanded = !descExpanded;
-            binding.tvDescription.setMaxLines(descExpanded ? Integer.MAX_VALUE : 3);
-            binding.btnExpandDesc.setText(descExpanded
+            tvDescription.setMaxLines(descExpanded ? Integer.MAX_VALUE : 3);
+            btnExpandDesc.setText(descExpanded
                     ? R.string.room_detail_collapse : R.string.room_detail_expand);
         });
     }
@@ -228,13 +304,13 @@ public class RoomDetailActivity extends AppCompatActivity {
         if (t.getImageUrl() != null && !t.getImageUrl().isEmpty()) {
             images.add(t.getImageUrl());
         }
-        binding.vpImages.setAdapter(new ImagePagerAdapter(images));
-        binding.layoutDotIndicator.setVisibility(images.size() > 1 ? View.VISIBLE : View.GONE);
+        vpImages.setAdapter(new ImagePagerAdapter(images));
+        layoutDotIndicator.setVisibility(images.size() > 1 ? View.VISIBLE : View.GONE);
         if (images.size() > 1) setupDots(images.size());
     }
 
     private void setupDots(int count) {
-        binding.layoutDotIndicator.removeAllViews();
+        layoutDotIndicator.removeAllViews();
         for (int i = 0; i < count; i++) {
             View dot = new View(this);
             int size = dp(6);
@@ -244,13 +320,13 @@ public class RoomDetailActivity extends AppCompatActivity {
             lp.setMarginEnd(dp(3));
             dot.setLayoutParams(lp);
             dot.setBackgroundResource(i == 0 ? R.drawable.bg_dot_active : R.drawable.bg_dot_inactive);
-            binding.layoutDotIndicator.addView(dot);
+            layoutDotIndicator.addView(dot);
         }
-        binding.vpImages.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+        vpImages.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
             @Override
             public void onPageSelected(int position) {
-                for (int i = 0; i < binding.layoutDotIndicator.getChildCount(); i++) {
-                    View dot = binding.layoutDotIndicator.getChildAt(i);
+                for (int i = 0; i < layoutDotIndicator.getChildCount(); i++) {
+                    View dot = layoutDotIndicator.getChildAt(i);
                     dot.setBackgroundResource(i == position
                             ? R.drawable.bg_dot_active : R.drawable.bg_dot_inactive);
                 }
@@ -297,20 +373,22 @@ public class RoomDetailActivity extends AppCompatActivity {
     /* ================== TIỆN NGHI ================== */
 
     private void bindAmenities(List<Amenity> amenities) {
-        binding.glAmenities.removeAllViews();
+        glAmenities.removeAllViews();
         LayoutInflater inflater = LayoutInflater.from(this);
         for (Amenity a : amenities) {
-            ItemAmenityBinding item = ItemAmenityBinding.inflate(inflater, binding.glAmenities, false);
-            item.tvAmenityName.setText(a.getAmenityName());
-            item.ivAmenityIcon.setImageResource(resolveAmenityIcon(a.getIconKey()));
+            View item = inflater.inflate(R.layout.item_amenity, glAmenities, false);
+            TextView tvAmenityName = item.findViewById(R.id.tvAmenityName);
+            ImageView ivAmenityIcon = item.findViewById(R.id.ivAmenityIcon);
+            tvAmenityName.setText(a.getAmenityName());
+            ivAmenityIcon.setImageResource(resolveAmenityIcon(a.getIconKey()));
 
             android.widget.GridLayout.LayoutParams lp = new android.widget.GridLayout.LayoutParams();
             lp.width = 0;
             lp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
             lp.columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f);
-            item.getRoot().setLayoutParams(lp);
+            item.setLayoutParams(lp);
 
-            binding.glAmenities.addView(item.getRoot());
+            glAmenities.addView(item);
         }
     }
 
@@ -324,11 +402,11 @@ public class RoomDetailActivity extends AppCompatActivity {
     /* ================== ĐÁNH GIÁ ================== */
 
     private void bindReviewSummary(RoomType t, int[] starCounts) {
-        binding.tvAvgRating.setText(String.format(Locale.getDefault(), "%.1f", t.getAvgRating()));
-        binding.tvTotalReviews.setText(
+        tvAvgRating.setText(String.format(Locale.getDefault(), "%.1f", t.getAvgRating()));
+        tvTotalReviews.setText(
                 getString(R.string.room_detail_total_reviews_format, t.getReviewCount()));
 
-        binding.layoutStars.removeAllViews();
+        layoutStars.removeAllViews();
         int rounded = Math.round(t.getAvgRating());
         for (int i = 0; i < 5; i++) {
             ImageView star = new ImageView(this);
@@ -340,15 +418,15 @@ public class RoomDetailActivity extends AppCompatActivity {
             star.setImageResource(filled ? R.drawable.ic_star_filled : R.drawable.ic_star);
             star.setColorFilter(getColor(R.color.gold));
             star.setAlpha(filled ? 1f : 0.25f);
-            binding.layoutStars.addView(star);
+            layoutStars.addView(star);
         }
 
         int total = t.getReviewCount();
-        bindStarBar(binding.pbStar5, binding.tvStar5Count, starCounts[0], total);
-        bindStarBar(binding.pbStar4, binding.tvStar4Count, starCounts[1], total);
-        bindStarBar(binding.pbStar3, binding.tvStar3Count, starCounts[2], total);
-        bindStarBar(binding.pbStar2, binding.tvStar2Count, starCounts[3], total);
-        bindStarBar(binding.pbStar1, binding.tvStar1Count, starCounts[4], total);
+        bindStarBar(pbStar5, tvStar5Count, starCounts[0], total);
+        bindStarBar(pbStar4, tvStar4Count, starCounts[1], total);
+        bindStarBar(pbStar3, tvStar3Count, starCounts[2], total);
+        bindStarBar(pbStar2, tvStar2Count, starCounts[3], total);
+        bindStarBar(pbStar1, tvStar1Count, starCounts[4], total);
     }
 
     private void bindStarBar(android.widget.ProgressBar bar, android.widget.TextView countView,
@@ -360,20 +438,29 @@ public class RoomDetailActivity extends AppCompatActivity {
 
     /** Vẽ danh sách đánh giá vào LinearLayout (thay cho RecyclerView). */
     private void bindReviewList(List<Review> reviews) {
-        binding.llReviews.removeAllViews();
+        llReviews.removeAllViews();
         LayoutInflater inflater = LayoutInflater.from(this);
 
         for (Review item : reviews) {
-            ItemReviewBinding b = ItemReviewBinding.inflate(inflater, binding.llReviews, false);
+            View b = inflater.inflate(R.layout.item_review, llReviews, false);
+
+            TextView tvReviewerName = b.findViewById(R.id.tvReviewerName);
+            TextView tvAvatar = b.findViewById(R.id.tvAvatar);
+            TextView tvReviewDate = b.findViewById(R.id.tvReviewDate);
+            TextView tvReviewComment = b.findViewById(R.id.tvReviewComment);
 
             String name = item.getReviewerName() == null ? "" : item.getReviewerName();
-            b.tvReviewerName.setText(name);
-            b.tvAvatar.setText(name.isEmpty() ? "?" : name.substring(0, 1).toUpperCase(Locale.ROOT));
-            b.tvReviewDate.setText(DateUtils.formatMonthYear(item.getCreatedAt()));
-            b.tvReviewComment.setText(item.getComment());
+            tvReviewerName.setText(name);
+            tvAvatar.setText(name.isEmpty() ? "?" : name.substring(0, 1).toUpperCase(Locale.ROOT));
+            tvReviewDate.setText(DateUtils.formatMonthYear(item.getCreatedAt()));
+            tvReviewComment.setText(item.getComment());
 
             ImageView[] stars = {
-                    b.ivReviewStar1, b.ivReviewStar2, b.ivReviewStar3, b.ivReviewStar4, b.ivReviewStar5
+                    b.findViewById(R.id.ivReviewStar1),
+                    b.findViewById(R.id.ivReviewStar2),
+                    b.findViewById(R.id.ivReviewStar3),
+                    b.findViewById(R.id.ivReviewStar4),
+                    b.findViewById(R.id.ivReviewStar5)
             };
             int rating = item.getRating();
             for (int i = 0; i < stars.length; i++) {
@@ -382,14 +469,14 @@ public class RoomDetailActivity extends AppCompatActivity {
                 stars[i].setAlpha(filled ? 1f : 0.25f);
             }
 
-            binding.llReviews.addView(b.getRoot());
+            llReviews.addView(b);
         }
     }
 
     /* ================== YÊU THÍCH ================== */
 
     private void bindFavoriteIcon() {
-        binding.btnFavorite.setImageResource(isFavorite ? R.drawable.ic_heart_filled : R.drawable.ic_heart);
+        btnFavorite.setImageResource(isFavorite ? R.drawable.ic_heart_filled : R.drawable.ic_heart);
     }
 
     private void toggleFavorite() {
@@ -403,8 +490,8 @@ public class RoomDetailActivity extends AppCompatActivity {
             AppExecutors.runOnUiSafe(this, () -> {
                 isFavorite = nowFavorite;
                 bindFavoriteIcon();
-                binding.btnFavorite.animate().scaleX(1.2f).scaleY(1.2f).setDuration(120)
-                        .withEndAction(() -> binding.btnFavorite.animate()
+                btnFavorite.animate().scaleX(1.2f).scaleY(1.2f).setDuration(120)
+                        .withEndAction(() -> btnFavorite.animate()
                                 .scaleX(1f).scaleY(1f).setDuration(120).start())
                         .start();
             });
@@ -415,21 +502,21 @@ public class RoomDetailActivity extends AppCompatActivity {
 
     private void bindBookButton(RoomType t, int overlapping) {
         if (!t.isActive()) {
-            binding.btnBookNow.setEnabled(false);
-            binding.btnBookNow.setAlpha(0.4f);
-            binding.tvInactiveNote.setVisibility(View.VISIBLE);
+            btnBookNow.setEnabled(false);
+            btnBookNow.setAlpha(0.4f);
+            tvInactiveNote.setVisibility(View.VISIBLE);
             return;
         }
         if (overlapping >= 0 && overlapping >= t.getTotalRooms()) {
-            binding.btnBookNow.setEnabled(false);
-            binding.btnBookNow.setAlpha(0.4f);
-            binding.tvInactiveNote.setVisibility(View.VISIBLE);
-            binding.tvInactiveNote.setText(R.string.room_detail_sold_out_note);
+            btnBookNow.setEnabled(false);
+            btnBookNow.setAlpha(0.4f);
+            tvInactiveNote.setVisibility(View.VISIBLE);
+            tvInactiveNote.setText(R.string.room_detail_sold_out_note);
             return;
         }
-        binding.btnBookNow.setEnabled(true);
-        binding.btnBookNow.setAlpha(1f);
-        binding.tvInactiveNote.setVisibility(View.GONE);
+        btnBookNow.setEnabled(true);
+        btnBookNow.setAlpha(1f);
+        tvInactiveNote.setVisibility(View.GONE);
     }
 
     private void onBookNowClicked() {
@@ -456,9 +543,9 @@ public class RoomDetailActivity extends AppCompatActivity {
                 // Cùng ngày = 0 đêm → không mở thanh toán, và không giữ ngày sai trong biến
                 checkIn = 0;
                 checkOut = 0;
-                Snackbar.make(binding.getRoot(), R.string.room_detail_min_one_night,
+                Snackbar.make(rootView, R.string.room_detail_min_one_night,
                                 Snackbar.LENGTH_LONG)
-                        .setAnchorView(binding.layoutBottomBar).show();
+                        .setAnchorView(layoutBottomBar).show();
                 return;
             }
             checkIn = in;
@@ -489,15 +576,15 @@ public class RoomDetailActivity extends AppCompatActivity {
     /* ================== CLICK CHUNG ================== */
 
     private void setupClicks() {
-        binding.btnBack.setOnClickListener(v -> finish());
-        binding.btnFavorite.setOnClickListener(v -> toggleFavorite());
-        binding.btnBookNow.setOnClickListener(v -> onBookNowClicked());
-        binding.btnSeeAllReviews.setOnClickListener(v -> showNotReady());
+        btnBack.setOnClickListener(v -> finish());
+        btnFavorite.setOnClickListener(v -> toggleFavorite());
+        btnBookNow.setOnClickListener(v -> onBookNowClicked());
+        btnSeeAllReviews.setOnClickListener(v -> showNotReady());
     }
 
     private void showNotReady() {
-        Snackbar.make(binding.getRoot(), R.string.feature_not_ready, Snackbar.LENGTH_SHORT)
-                .setAnchorView(binding.layoutBottomBar)
+        Snackbar.make(rootView, R.string.feature_not_ready, Snackbar.LENGTH_SHORT)
+                .setAnchorView(layoutBottomBar)
                 .show();
     }
 }

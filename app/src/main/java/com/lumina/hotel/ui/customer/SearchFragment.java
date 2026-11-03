@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ContextThemeWrapper;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -13,14 +14,15 @@ import androidx.core.util.Pair;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.datepicker.CalendarConstraints;
 import com.google.android.material.datepicker.DateValidatorPointForward;
 import com.google.android.material.datepicker.MaterialDatePicker;
+import com.google.android.material.slider.RangeSlider;
 import com.google.android.material.snackbar.Snackbar;
 
 import com.lumina.hotel.R;
 import com.lumina.hotel.data.dao.AmenityDao;
-import com.lumina.hotel.databinding.FragmentSearchBinding;
 import com.lumina.hotel.model.Amenity;
 import com.lumina.hotel.util.AppExecutors;
 import com.lumina.hotel.util.DateUtils;
@@ -57,7 +59,30 @@ public class SearchFragment extends Fragment {
     private static final long DEFAULT_PRICE_MAX = 5_000_000;
 
 
-    private FragmentSearchBinding binding;
+    private View rootView;
+    private View layoutCheckIn;
+    private View layoutCheckOut;
+    private View btnGuestMinus;
+    private View btnGuestPlus;
+    private View layoutAdvanced;
+    private RangeSlider sliderPrice;
+    private ChipGroup cgRoomType;
+    private Chip chipAll;
+    private View tvResetFilter;
+    private View btnSearch;
+    private TextView tvCheckInDate;
+    private TextView tvCheckInWeekday;
+    private TextView tvCheckOutDate;
+    private TextView tvCheckOutWeekday;
+    private TextView tvNightCount;
+    private TextView tvGuestCount;
+    private View layoutAdvancedContent;
+    private View ivAdvancedArrow;
+    private TextView tvPriceValue;
+    private ChipGroup cgAmenity;
+    private View layoutFilterStatus;
+    private TextView tvFilterStatus;
+
     private AmenityDao amenityDao;
     private SharedPreferences prefs;
 
@@ -70,13 +95,36 @@ public class SearchFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        binding = FragmentSearchBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        rootView = inflater.inflate(R.layout.fragment_search, container, false);
+        return rootView;
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        layoutCheckIn = view.findViewById(R.id.layoutCheckIn);
+        layoutCheckOut = view.findViewById(R.id.layoutCheckOut);
+        btnGuestMinus = view.findViewById(R.id.btnGuestMinus);
+        btnGuestPlus = view.findViewById(R.id.btnGuestPlus);
+        layoutAdvanced = view.findViewById(R.id.layoutAdvanced);
+        sliderPrice = view.findViewById(R.id.sliderPrice);
+        cgRoomType = view.findViewById(R.id.cgRoomType);
+        chipAll = view.findViewById(R.id.chipAll);
+        tvResetFilter = view.findViewById(R.id.tvResetFilter);
+        btnSearch = view.findViewById(R.id.btnSearch);
+        tvCheckInDate = view.findViewById(R.id.tvCheckInDate);
+        tvCheckInWeekday = view.findViewById(R.id.tvCheckInWeekday);
+        tvCheckOutDate = view.findViewById(R.id.tvCheckOutDate);
+        tvCheckOutWeekday = view.findViewById(R.id.tvCheckOutWeekday);
+        tvNightCount = view.findViewById(R.id.tvNightCount);
+        tvGuestCount = view.findViewById(R.id.tvGuestCount);
+        layoutAdvancedContent = view.findViewById(R.id.layoutAdvancedContent);
+        ivAdvancedArrow = view.findViewById(R.id.ivAdvancedArrow);
+        tvPriceValue = view.findViewById(R.id.tvPriceValue);
+        cgAmenity = view.findViewById(R.id.cgAmenity);
+        layoutFilterStatus = view.findViewById(R.id.layoutFilterStatus);
+        tvFilterStatus = view.findViewById(R.id.tvFilterStatus);
 
         amenityDao = new AmenityDao(requireContext());
         prefs = requireContext().getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE);
@@ -87,32 +135,32 @@ public class SearchFragment extends Fragment {
         loadAmenityChips();
         updatePriceLabel();
 
-        binding.layoutCheckIn.setOnClickListener(v -> openDateRangePicker());
-        binding.layoutCheckOut.setOnClickListener(v -> openDateRangePicker());
+        layoutCheckIn.setOnClickListener(v -> openDateRangePicker());
+        layoutCheckOut.setOnClickListener(v -> openDateRangePicker());
 
-        binding.btnGuestMinus.setOnClickListener(v -> {
+        btnGuestMinus.setOnClickListener(v -> {
             if (numGuests > MIN_GUESTS) {
                 numGuests--;
                 updateGuestViews();
             }
         });
-        binding.btnGuestPlus.setOnClickListener(v -> {
+        btnGuestPlus.setOnClickListener(v -> {
             if (numGuests < MAX_GUESTS) {
                 numGuests++;
                 updateGuestViews();
             }
         });
 
-        binding.layoutAdvanced.setOnClickListener(v -> toggleAdvanced());
+        layoutAdvanced.setOnClickListener(v -> toggleAdvanced());
 
-        binding.sliderPrice.addOnChangeListener((slider, value, fromUser) -> {
+        sliderPrice.addOnChangeListener((slider, value, fromUser) -> {
             updatePriceLabel();
             updateFilterStatusViews();
         });
-        binding.cgRoomType.setOnCheckedStateChangeListener((group, checkedIds) -> updateFilterStatusViews());
-        binding.tvResetFilter.setOnClickListener(v -> resetFilters());
+        cgRoomType.setOnCheckedStateChangeListener((group, checkedIds) -> updateFilterStatusViews());
+        tvResetFilter.setOnClickListener(v -> resetFilters());
 
-        binding.btnSearch.setOnClickListener(v -> onSearchClicked());
+        btnSearch.setOnClickListener(v -> onSearchClicked());
 
         updateFilterStatusViews();
     }
@@ -134,7 +182,7 @@ public class SearchFragment extends Fragment {
             long newCheckIn = fromUtcMillis(selection.first);
             long newCheckOut = fromUtcMillis(selection.second);
             if (DateUtils.nightsBetween(newCheckIn, newCheckOut) < 1) {
-                Snackbar.make(binding.getRoot(), R.string.search_error_date_order, Snackbar.LENGTH_SHORT).show();
+                Snackbar.make(rootView, R.string.search_error_date_order, Snackbar.LENGTH_SHORT).show();
                 return;
             }
             checkIn = newCheckIn;
@@ -165,42 +213,42 @@ public class SearchFragment extends Fragment {
     }
 
     private void updateDateViews() {
-        binding.tvCheckInDate.setText(DateUtils.formatFull(checkIn));
-        binding.tvCheckInWeekday.setText(DateUtils.weekdayVi(checkIn));
-        binding.tvCheckOutDate.setText(DateUtils.formatFull(checkOut));
-        binding.tvCheckOutWeekday.setText(DateUtils.weekdayVi(checkOut));
+        tvCheckInDate.setText(DateUtils.formatFull(checkIn));
+        tvCheckInWeekday.setText(DateUtils.weekdayVi(checkIn));
+        tvCheckOutDate.setText(DateUtils.formatFull(checkOut));
+        tvCheckOutWeekday.setText(DateUtils.weekdayVi(checkOut));
         int nights = DateUtils.nightsBetween(checkIn, checkOut);
-        binding.tvNightCount.setText(getString(R.string.night_count_format, nights));
+        tvNightCount.setText(getString(R.string.night_count_format, nights));
     }
 
     // ===================== SỐ KHÁCH =====================
 
     private void updateGuestViews() {
-        binding.tvGuestCount.setText(String.valueOf(numGuests));
-        binding.btnGuestMinus.setEnabled(numGuests > MIN_GUESTS);
-        binding.btnGuestMinus.setAlpha(numGuests > MIN_GUESTS ? 1f : 0.4f);
-        binding.btnGuestPlus.setEnabled(numGuests < MAX_GUESTS);
-        binding.btnGuestPlus.setAlpha(numGuests < MAX_GUESTS ? 1f : 0.4f);
+        tvGuestCount.setText(String.valueOf(numGuests));
+        btnGuestMinus.setEnabled(numGuests > MIN_GUESTS);
+        btnGuestMinus.setAlpha(numGuests > MIN_GUESTS ? 1f : 0.4f);
+        btnGuestPlus.setEnabled(numGuests < MAX_GUESTS);
+        btnGuestPlus.setAlpha(numGuests < MAX_GUESTS ? 1f : 0.4f);
     }
 
     // ===================== BỘ LỌC NÂNG CAO =====================
 
     private void toggleAdvanced() {
         advancedExpanded = !advancedExpanded;
-        binding.layoutAdvancedContent.setVisibility(advancedExpanded ? View.VISIBLE : View.GONE);
-        binding.ivAdvancedArrow.animate().rotation(advancedExpanded ? 180f : 0f).setDuration(200).start();
+        layoutAdvancedContent.setVisibility(advancedExpanded ? View.VISIBLE : View.GONE);
+        ivAdvancedArrow.animate().rotation(advancedExpanded ? 180f : 0f).setDuration(200).start();
     }
 
     private void updatePriceLabel() {
-        List<Float> values = binding.sliderPrice.getValues();
+        List<Float> values = sliderPrice.getValues();
         long min = values.get(0).longValue();
         long max = values.get(1).longValue();
-        binding.tvPriceValue.setText(getString(R.string.search_price_value_format,
+        tvPriceValue.setText(getString(R.string.search_price_value_format,
                 PriceUtils.formatShort(min), PriceUtils.formatShort(max)));
     }
 
     private void loadAmenityChips() {
-        binding.cgAmenity.removeAllViews();
+        cgAmenity.removeAllViews();
         AppExecutors.io(() -> {
             List<Amenity> amenities = amenityDao.getAll();
             AppExecutors.runOnUiSafe(getActivity(), () -> {
@@ -210,7 +258,7 @@ public class SearchFragment extends Fragment {
                     chip.setText(a.getAmenityName());
                     chip.setTag(a.getId());
                     chip.setOnCheckedChangeListener((buttonView, isChecked) -> updateFilterStatusViews());
-                    binding.cgAmenity.addView(chip);
+                    cgAmenity.addView(chip);
                 }
                 restoreCheckedAmenities();
             });
@@ -220,38 +268,38 @@ public class SearchFragment extends Fragment {
     // ===================== LOẠI PHÒNG =====================
 
     private String getSelectedTypeFilter() {
-        int checkedId = binding.cgRoomType.getCheckedChipId();
+        int checkedId = cgRoomType.getCheckedChipId();
         if (checkedId == R.id.chipAll || checkedId == View.NO_ID) return "all";
-        Chip chip = binding.getRoot().findViewById(checkedId);
+        Chip chip = rootView.findViewById(checkedId);
         return chip != null ? chip.getText().toString() : "all";
     }
 
     private void selectTypeFilter(String typeFilter) {
         if ("all".equals(typeFilter)) {
-            binding.chipAll.setChecked(true);
+            chipAll.setChecked(true);
             return;
         }
-        for (int i = 0; i < binding.cgRoomType.getChildCount(); i++) {
-            View child = binding.cgRoomType.getChildAt(i);
+        for (int i = 0; i < cgRoomType.getChildCount(); i++) {
+            View child = cgRoomType.getChildAt(i);
             if (child instanceof Chip && ((Chip) child).getText().toString().equals(typeFilter)) {
                 ((Chip) child).setChecked(true);
                 return;
             }
         }
-        binding.chipAll.setChecked(true);
+        chipAll.setChecked(true);
     }
 
     // ===================== TÌM KIẾM =====================
 
     private void onSearchClicked() {
-        List<Float> priceValues = binding.sliderPrice.getValues();
+        List<Float> priceValues = sliderPrice.getValues();
         long priceMin = priceValues.get(0).longValue();
         long priceMax = priceValues.get(1).longValue();
         String typeFilter = getSelectedTypeFilter();
 
         List<Integer> amenityIds = new ArrayList<>();
-        for (int i = 0; i < binding.cgAmenity.getChildCount(); i++) {
-            View child = binding.cgAmenity.getChildAt(i);
+        for (int i = 0; i < cgAmenity.getChildCount(); i++) {
+            View child = cgAmenity.getChildAt(i);
             if (child instanceof Chip && ((Chip) child).isChecked()) {
                 amenityIds.add((Integer) child.getTag());
             }
@@ -273,7 +321,7 @@ public class SearchFragment extends Fragment {
     }
 
     private void showNotReadySnackbar() {
-        Snackbar.make(binding.getRoot(), R.string.feature_not_ready, Snackbar.LENGTH_SHORT).show();
+        Snackbar.make(rootView, R.string.feature_not_ready, Snackbar.LENGTH_SHORT).show();
     }
 
     // ===================== SHARED PREFERENCES =====================
@@ -296,7 +344,7 @@ public class SearchFragment extends Fragment {
         long savedMin = prefs.getLong(KEY_PRICE_MIN, -1);
         long savedMax = prefs.getLong(KEY_PRICE_MAX, -1);
         if (savedMin >= 0 && savedMax >= 0) {
-            binding.sliderPrice.setValues((float) savedMin, (float) savedMax);
+            sliderPrice.setValues((float) savedMin, (float) savedMax);
         }
     }
 
@@ -304,8 +352,8 @@ public class SearchFragment extends Fragment {
         String saved = prefs.getString(KEY_AMENITY_IDS, "");
         if (saved.isEmpty()) return;
         List<String> savedIds = java.util.Arrays.asList(saved.split(","));
-        for (int i = 0; i < binding.cgAmenity.getChildCount(); i++) {
-            View child = binding.cgAmenity.getChildAt(i);
+        for (int i = 0; i < cgAmenity.getChildCount(); i++) {
+            View child = cgAmenity.getChildAt(i);
             if (child instanceof Chip && savedIds.contains(String.valueOf(child.getTag()))) {
                 ((Chip) child).setChecked(true);
             }
@@ -332,14 +380,36 @@ public class SearchFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        binding = null;
+        rootView = null;
+        layoutCheckIn = null;
+        layoutCheckOut = null;
+        btnGuestMinus = null;
+        btnGuestPlus = null;
+        layoutAdvanced = null;
+        sliderPrice = null;
+        cgRoomType = null;
+        chipAll = null;
+        tvResetFilter = null;
+        btnSearch = null;
+        tvCheckInDate = null;
+        tvCheckInWeekday = null;
+        tvCheckOutDate = null;
+        tvCheckOutWeekday = null;
+        tvNightCount = null;
+        tvGuestCount = null;
+        layoutAdvancedContent = null;
+        ivAdvancedArrow = null;
+        tvPriceValue = null;
+        cgAmenity = null;
+        layoutFilterStatus = null;
+        tvFilterStatus = null;
     }
 
     private void updateFilterStatusViews() {
         int count = 0;
         if (!"all".equals(getSelectedTypeFilter())) count++;
 
-        List<Float> priceValues = binding.sliderPrice.getValues();
+        List<Float> priceValues = sliderPrice.getValues();
         long min = priceValues.get(0).longValue();
         long max = priceValues.get(1).longValue();
         if (min != DEFAULT_PRICE_MIN || max != DEFAULT_PRICE_MAX) {
@@ -347,25 +417,25 @@ public class SearchFragment extends Fragment {
         }
 
         int amenityCount = 0;
-        for (int i = 0; i < binding.cgAmenity.getChildCount(); i++) {
-            View child = binding.cgAmenity.getChildAt(i);
+        for (int i = 0; i < cgAmenity.getChildCount(); i++) {
+            View child = cgAmenity.getChildAt(i);
             if (child instanceof Chip && ((Chip) child).isChecked()) amenityCount++;
         }
         if (amenityCount > 0) count++;
 
         if (count == 0) {
-            binding.layoutFilterStatus.setVisibility(View.GONE);
+            layoutFilterStatus.setVisibility(View.GONE);
         } else {
-            binding.layoutFilterStatus.setVisibility(View.VISIBLE);
-            binding.tvFilterStatus.setText(getString(R.string.filter_status_count_format, count));
+            layoutFilterStatus.setVisibility(View.VISIBLE);
+            tvFilterStatus.setText(getString(R.string.filter_status_count_format, count));
         }
     }
 
     private void resetFilters() {
-        binding.chipAll.setChecked(true);
-        binding.sliderPrice.setValues((float) DEFAULT_PRICE_MIN, (float) DEFAULT_PRICE_MAX);
-        for (int i = 0; i < binding.cgAmenity.getChildCount(); i++) {
-            View child = binding.cgAmenity.getChildAt(i);
+        chipAll.setChecked(true);
+        sliderPrice.setValues((float) DEFAULT_PRICE_MIN, (float) DEFAULT_PRICE_MAX);
+        for (int i = 0; i < cgAmenity.getChildCount(); i++) {
+            View child = cgAmenity.getChildAt(i);
             if (child instanceof Chip) ((Chip) child).setChecked(false);
         }
         updatePriceLabel();
