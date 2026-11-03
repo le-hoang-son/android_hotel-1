@@ -119,7 +119,11 @@ public class BookingAdapter extends BaseAdapter {
         root.setAlpha(isCancelled ? 0.7f : 1f);
         root.setOnClickListener(v -> listener.onDetailClick(item));
 
-        h.btnCancel.setVisibility(isPending ? View.VISIBLE : View.GONE);
+        // Khớp điều kiện huỷ của MyBookingsFragment: pending hoặc confirmed, chưa qua ngày nhận phòng
+        // (cho huỷ tới hết ngày nhận phòng, kể cả nhận phòng hôm nay).
+        boolean cancellable = (isPending || isConfirmed)
+                && item.getBooking().getCheckInDate() >= DateUtils.today();
+        h.btnCancel.setVisibility(cancellable ? View.VISIBLE : View.GONE);
         h.btnCancel.setOnClickListener(v -> listener.onCancelClick(item));
 
         if (isCancelled) {

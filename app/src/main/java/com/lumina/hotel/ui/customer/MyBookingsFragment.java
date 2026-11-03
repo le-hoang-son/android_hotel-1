@@ -221,10 +221,11 @@ public class MyBookingsFragment extends Fragment implements BookingAdapter.Liste
 
     @Override
     public void onCancelClick(BookingWithDetail item) {
-        boolean stillFuture = item.getBooking().getCheckInDate() > DateUtils.today();
+        // Cho huỷ tới hết ngày nhận phòng (kể cả nhận phòng hôm nay).
+        boolean withinCancelWindow = item.getBooking().getCheckInDate() >= DateUtils.today();
         boolean cancellable = (BookingStatus.PENDING.equals(item.getBooking().getBookingStatus())
                 || BookingStatus.CONFIRMED.equals(item.getBooking().getBookingStatus()))
-                && stillFuture;
+                && withinCancelWindow;
         if (!cancellable) {
             Snackbar.make(rootView, R.string.snackbar_cancel_failed, Snackbar.LENGTH_SHORT).show();
             return;
