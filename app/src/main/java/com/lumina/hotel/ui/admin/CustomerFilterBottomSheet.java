@@ -15,11 +15,11 @@ import androidx.fragment.app.Fragment;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.datepicker.MaterialDatePicker;
 import com.lumina.hotel.R;
-import com.lumina.hotel.databinding.BottomSheetFilterCustomerBinding;
 import com.lumina.hotel.model.CustomerFilter;
 
 import java.text.SimpleDateFormat;
@@ -39,7 +39,14 @@ public class CustomerFilterBottomSheet extends BottomSheetDialogFragment {
         void onFilterApplied(CustomerFilter filter);
     }
 
-    private BottomSheetFilterCustomerBinding binding;
+    private View rootView;
+    private ChipGroup cgFilterHistory;
+    private ChipGroup cgFilterVip;
+    private MaterialButton btnFilterDate;
+    private MaterialButton btnFilterDateClear;
+    private MaterialButton btnFilterReset;
+    private MaterialButton btnFilterApply;
+
     private CustomerFilter working;
 
     public static CustomerFilterBottomSheet newInstance(CustomerFilter current) {
@@ -72,8 +79,8 @@ public class CustomerFilterBottomSheet extends BottomSheetDialogFragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        binding = BottomSheetFilterCustomerBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        rootView = inflater.inflate(R.layout.bottom_sheet_filter_customer, container, false);
+        return rootView;
     }
 
     @Override
@@ -91,28 +98,35 @@ public class CustomerFilterBottomSheet extends BottomSheetDialogFragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        cgFilterHistory = view.findViewById(R.id.cgFilterHistory);
+        cgFilterVip = view.findViewById(R.id.cgFilterVip);
+        btnFilterDate = view.findViewById(R.id.btnFilterDate);
+        btnFilterDateClear = view.findViewById(R.id.btnFilterDateClear);
+        btnFilterReset = view.findViewById(R.id.btnFilterReset);
+        btnFilterApply = view.findViewById(R.id.btnFilterApply);
+
         String raw = getArguments() != null ? getArguments().getString(ARG_FILTER, "") : "";
         working = CustomerFilter.parse(raw);
 
-        buildChoiceChips(binding.cgFilterHistory,
+        buildChoiceChips(cgFilterHistory,
                 new String[]{CustomerFilter.HISTORY_HAS, CustomerFilter.HISTORY_NONE},
                 new int[]{R.string.admin_customer_filter_history_has,
                         R.string.admin_customer_filter_history_none},
                 working.getHistory());
-        buildChoiceChips(binding.cgFilterVip,
+        buildChoiceChips(cgFilterVip,
                 new String[]{CustomerFilter.VIP_YES, CustomerFilter.VIP_NO},
                 new int[]{R.string.admin_customer_filter_vip_yes,
                         R.string.admin_customer_filter_vip_no},
                 working.getVip());
         updateDateButton();
 
-        binding.btnFilterDate.setOnClickListener(v -> openDatePicker());
-        binding.btnFilterDateClear.setOnClickListener(v -> {
+        btnFilterDate.setOnClickListener(v -> openDatePicker());
+        btnFilterDateClear.setOnClickListener(v -> {
             working.clearDateRange();
             updateDateButton();
         });
-        binding.btnFilterReset.setOnClickListener(v -> resetInputs());
-        binding.btnFilterApply.setOnClickListener(v -> applyAndClose());
+        btnFilterReset.setOnClickListener(v -> resetInputs());
+        btnFilterApply.setOnClickListener(v -> applyAndClose());
     }
 
     // ---------------- CHIP CHỌN MỘT ----------------
@@ -155,7 +169,7 @@ public class CustomerFilterBottomSheet extends BottomSheetDialogFragment {
             if (selection == null || selection.first == null || selection.second == null) return;
             working.setDateRange(utcToLocalMidnight(selection.first),
                     utcToLocalMidnight(selection.second));
-            if (binding != null) updateDateButton();
+            if (rootView != null) updateDateButton();
         });
         picker.show(getChildFragmentManager(), TAG_DATE_PICKER);
     }
@@ -174,8 +188,8 @@ public class CustomerFilterBottomSheet extends BottomSheetDialogFragment {
         } else {
             text = getString(R.string.dash_pick_range);
         }
-        binding.btnFilterDate.setText(text);
-        binding.btnFilterDateClear.setVisibility(working.hasDateRange() ? View.VISIBLE : View.GONE);
+        btnFilterDate.setText(text);
+        btnFilterDateClear.setVisibility(working.hasDateRange() ? View.VISIBLE : View.GONE);
     }
 
     private static String formatDate(long millis) {
@@ -207,16 +221,16 @@ public class CustomerFilterBottomSheet extends BottomSheetDialogFragment {
 
     /** Chỉ xoá lựa chọn trên giao diện — chưa lưu cho tới khi bấm "Áp dụng". */
     private void resetInputs() {
-        binding.cgFilterHistory.clearCheck();
-        binding.cgFilterVip.clearCheck();
+        cgFilterHistory.clearCheck();
+        cgFilterVip.clearCheck();
         working.clearDateRange();
         updateDateButton();
     }
 
     private void applyAndClose() {
         CustomerFilter result = new CustomerFilter();
-        result.setHistory(checkedValue(binding.cgFilterHistory));
-        result.setVip(checkedValue(binding.cgFilterVip));
+        result.setHistory(checkedValue(cgFilterHistory));
+        result.setVip(checkedValue(cgFilterVip));
         result.setDateRange(working.getDateFrom(), working.getDateTo());
 
         result.save(requireContext());
@@ -231,6 +245,12 @@ public class CustomerFilterBottomSheet extends BottomSheetDialogFragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        binding = null;
+        rootView = null;
+        cgFilterHistory = null;
+        cgFilterVip = null;
+        btnFilterDate = null;
+        btnFilterDateClear = null;
+        btnFilterReset = null;
+        btnFilterApply = null;
     }
 }

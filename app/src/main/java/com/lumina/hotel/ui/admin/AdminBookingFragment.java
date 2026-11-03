@@ -7,7 +7,13 @@ import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.HorizontalScrollView;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -18,6 +24,7 @@ import androidx.fragment.app.Fragment;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.lumina.hotel.R;
@@ -25,7 +32,6 @@ import com.lumina.hotel.adapter.AdminBookingAdapter;
 import com.lumina.hotel.data.DbContract;
 import com.lumina.hotel.data.dao.BookingDao;
 import com.lumina.hotel.data.dao.RoomDao;
-import com.lumina.hotel.databinding.FragmentAdminBookingBinding;
 import com.lumina.hotel.model.BookingWithDetail;
 import com.lumina.hotel.model.BookingFilter;
 import com.lumina.hotel.model.IntentKeys;
@@ -43,7 +49,26 @@ import java.util.concurrent.Executors;
 /** SPEC 11 — Tab "Đơn đặt phòng" của Admin: danh sách + chip lọc + chuỗi chuyển trạng thái. */
 public class AdminBookingFragment extends Fragment implements AdminBookingAdapter.OnBookingActionListener, BookingFilterBottomSheet.OnFilterAppliedListener {
 
-    private FragmentAdminBookingBinding binding;
+    private View rootView;
+    private ListView lvBookings;
+    private View layoutEmpty;
+    private Button btnEmptyAction;
+    private TextView tvEmptyTitle;
+    private TextView tvEmptyDesc;
+    private ImageButton btnFilter;
+    private LinearLayout llAdminHeader;
+    private ChipGroup cgBookingStatus;
+    private Chip chipAll;
+    private Chip chipPending;
+    private Chip chipConfirmed;
+    private Chip chipCheckedIn;
+    private Chip chipCompleted;
+    private Chip chipCancelled;
+    private ChipGroup cgActiveFilters;
+    private View svActiveFilters;
+    private View cvFilterBadge;
+    private View pbLoading;
+
     private BookingDao bookingDao;
     private RoomDao roomDao;
     private ExecutorService executor;
@@ -59,13 +84,32 @@ public class AdminBookingFragment extends Fragment implements AdminBookingAdapte
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        binding = FragmentAdminBookingBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        rootView = inflater.inflate(R.layout.fragment_admin_booking, container, false);
+        return rootView;
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        lvBookings = view.findViewById(R.id.lvBookings);
+        layoutEmpty = view.findViewById(R.id.layoutEmpty);
+        btnEmptyAction = layoutEmpty.findViewById(R.id.btnEmptyAction);
+        tvEmptyTitle = layoutEmpty.findViewById(R.id.tvEmptyTitle);
+        tvEmptyDesc = layoutEmpty.findViewById(R.id.tvEmptyDesc);
+        btnFilter = view.findViewById(R.id.btnFilter);
+        llAdminHeader = view.findViewById(R.id.llAdminHeader);
+        cgBookingStatus = view.findViewById(R.id.cgBookingStatus);
+        chipAll = view.findViewById(R.id.chipAll);
+        chipPending = view.findViewById(R.id.chipPending);
+        chipConfirmed = view.findViewById(R.id.chipConfirmed);
+        chipCheckedIn = view.findViewById(R.id.chipCheckedIn);
+        chipCompleted = view.findViewById(R.id.chipCompleted);
+        chipCancelled = view.findViewById(R.id.chipCancelled);
+        cgActiveFilters = view.findViewById(R.id.cgActiveFilters);
+        svActiveFilters = view.findViewById(R.id.svActiveFilters);
+        cvFilterBadge = view.findViewById(R.id.cvFilterBadge);
+        pbLoading = view.findViewById(R.id.pbLoading);
+
         bookingDao = new BookingDao(requireContext().getApplicationContext());
         roomDao = new RoomDao(requireContext().getApplicationContext());
         executor = Executors.newSingleThreadExecutor();
@@ -80,13 +124,13 @@ public class AdminBookingFragment extends Fragment implements AdminBookingAdapte
             startActivity(intent);
         });
         adapter.setOnBookingActionListener(this);
-        binding.lvBookings.setAdapter(adapter);
+        lvBookings.setAdapter(adapter);
 
-        binding.layoutEmpty.btnEmptyAction.setVisibility(View.GONE);
+        btnEmptyAction.setVisibility(View.GONE);
 
         bookingFilter = BookingFilter.load(requireContext());
         setupFilterChips();
-        binding.btnFilter.setOnClickListener(v -> openFilterSheet());
+        btnFilter.setOnClickListener(v -> openFilterSheet());
     }
 
     @Override
@@ -100,36 +144,54 @@ public class AdminBookingFragment extends Fragment implements AdminBookingAdapte
         super.onDestroyView();
         mainHandler.removeCallbacksAndMessages(null);
         if (executor != null) executor.shutdownNow();
-        binding = null;
+        rootView = null;
+        lvBookings = null;
+        layoutEmpty = null;
+        btnEmptyAction = null;
+        tvEmptyTitle = null;
+        tvEmptyDesc = null;
+        btnFilter = null;
+        llAdminHeader = null;
+        cgBookingStatus = null;
+        chipAll = null;
+        chipPending = null;
+        chipConfirmed = null;
+        chipCheckedIn = null;
+        chipCompleted = null;
+        chipCancelled = null;
+        cgActiveFilters = null;
+        svActiveFilters = null;
+        cvFilterBadge = null;
+        pbLoading = null;
     }
 
     // ---------------- GIAO DIỆN ----------------
 
     private void setupHeaderInset() {
-        headerPaddingTop = binding.llAdminHeader.getPaddingTop();
-        ViewCompat.setOnApplyWindowInsetsListener(binding.llAdminHeader, (v, insets) -> {
+        headerPaddingTop = llAdminHeader.getPaddingTop();
+        ViewCompat.setOnApplyWindowInsetsListener(llAdminHeader, (v, insets) -> {
             Insets sb = insets.getInsets(WindowInsetsCompat.Type.statusBars());
             v.setPadding(v.getPaddingLeft(), headerPaddingTop + sb.top,
                     v.getPaddingRight(), v.getPaddingBottom());
             return insets;
         });
-        ViewCompat.requestApplyInsets(binding.llAdminHeader);
+        ViewCompat.requestApplyInsets(llAdminHeader);
     }
 
     private void showMessage(int stringRes) {
-        if (binding != null) Snackbar.make(binding.getRoot(), stringRes, Snackbar.LENGTH_LONG).show();
+        if (rootView != null) Snackbar.make(rootView, stringRes, Snackbar.LENGTH_LONG).show();
     }
 
     private void setupFilterChips() {
-        binding.cgBookingStatus.setOnCheckedStateChangeListener((group, checkedIds) -> {
+        cgBookingStatus.setOnCheckedStateChangeListener((group, checkedIds) -> {
             if (checkedIds.isEmpty()) return; // selectionRequired=true nên không xảy ra
             int id = checkedIds.get(0);
-            if (id == binding.chipAll.getId()) currentFilter = "all";
-            else if (id == binding.chipPending.getId()) currentFilter = DbContract.BookingStatus.PENDING;
-            else if (id == binding.chipConfirmed.getId()) currentFilter = DbContract.BookingStatus.CONFIRMED;
-            else if (id == binding.chipCheckedIn.getId()) currentFilter = DbContract.BookingStatus.CHECKED_IN;
-            else if (id == binding.chipCompleted.getId()) currentFilter = DbContract.BookingStatus.COMPLETED;
-            else if (id == binding.chipCancelled.getId()) currentFilter = DbContract.BookingStatus.CANCELLED;
+            if (id == chipAll.getId()) currentFilter = "all";
+            else if (id == chipPending.getId()) currentFilter = DbContract.BookingStatus.PENDING;
+            else if (id == chipConfirmed.getId()) currentFilter = DbContract.BookingStatus.CONFIRMED;
+            else if (id == chipCheckedIn.getId()) currentFilter = DbContract.BookingStatus.CHECKED_IN;
+            else if (id == chipCompleted.getId()) currentFilter = DbContract.BookingStatus.COMPLETED;
+            else if (id == chipCancelled.getId()) currentFilter = DbContract.BookingStatus.CANCELLED;
             loadBookings(); // chỉ tải lại danh sách, giữ nguyên số đếm chip
         });
     }
@@ -146,15 +208,15 @@ public class AdminBookingFragment extends Fragment implements AdminBookingAdapte
     @Override
     public void onFilterApplied(BookingFilter filter) {
         bookingFilter = filter;
-        if (binding != null) loadData(); // đổi bộ lọc nâng cao → phải tải lại cả số đếm lẫn danh sách
+        if (rootView != null) loadData(); // đổi bộ lọc nâng cao → phải tải lại cả số đếm lẫn danh sách
     }
 
     /** Vẽ lại hàng chip "đang áp dụng" + chấm badge trên icon phễu. */
     private void renderActiveFilters() {
         boolean active = bookingFilter.isActive();
-        binding.cgActiveFilters.removeAllViews();
-        binding.svActiveFilters.setVisibility(active ? View.VISIBLE : View.GONE);
-        binding.cvFilterBadge.setVisibility(active ? View.VISIBLE : View.GONE);
+        cgActiveFilters.removeAllViews();
+        svActiveFilters.setVisibility(active ? View.VISIBLE : View.GONE);
+        cvFilterBadge.setVisibility(active ? View.VISIBLE : View.GONE);
         if (!active) return;
 
         // Chip phương thức thanh toán — theo đúng thứ tự cash, vnpay, momo, card
@@ -202,14 +264,14 @@ public class AdminBookingFragment extends Fragment implements AdminBookingAdapte
 
     private void addActiveChip(String label, Runnable onRemove) {
         Chip chip = (Chip) getLayoutInflater()
-                .inflate(R.layout.chip_filter_option, binding.cgActiveFilters, false);
+                .inflate(R.layout.chip_filter_option, cgActiveFilters, false);
         chip.setId(View.generateViewId());
         chip.setCheckable(false);
         chip.setText(label);
         chip.setCloseIconVisible(true);
         chip.setCloseIconContentDescription(getString(R.string.admin_room_filter_cd_remove, label));
         chip.setOnCloseIconClickListener(v -> onRemove.run());
-        binding.cgActiveFilters.addView(chip);
+        cgActiveFilters.addView(chip);
     }
 
     /** Sau khi gỡ 1 điều kiện bằng nút x: lưu lại rồi tải lại số đếm + danh sách. */
@@ -224,7 +286,7 @@ public class AdminBookingFragment extends Fragment implements AdminBookingAdapte
     private void loadData() {
         final int token = ++loadToken;
         final BookingFilter filter = bookingFilter.copy(); // chụp bản sao để luồng nền không đọc dữ liệu đang bị sửa
-        if (adapter.getCount() == 0) binding.pbLoading.setVisibility(View.VISIBLE);
+        if (adapter.getCount() == 0) pbLoading.setVisibility(View.VISIBLE);
 
         executor.execute(() -> {
             Map<String, Integer> counts = null;
@@ -240,8 +302,8 @@ public class AdminBookingFragment extends Fragment implements AdminBookingAdapte
             final boolean fFailed = failed;
 
             mainHandler.post(() -> {
-                if (binding == null || token != loadToken) return;
-                binding.pbLoading.setVisibility(View.GONE);
+                if (rootView == null || token != loadToken) return;
+                pbLoading.setVisibility(View.GONE);
                 if (fFailed) {
                     showMessage(R.string.admin_booking_load_error);
                     return;
@@ -267,7 +329,7 @@ public class AdminBookingFragment extends Fragment implements AdminBookingAdapte
             }
             final boolean fFailed = failed;
             mainHandler.post(() -> {
-                if (binding == null || token != loadToken) return;
+                if (rootView == null || token != loadToken) return;
                 if (fFailed) {
                     showMessage(R.string.admin_booking_load_error);
                     return;
@@ -282,28 +344,28 @@ public class AdminBookingFragment extends Fragment implements AdminBookingAdapte
         boolean empty = bookings.isEmpty();
         if (empty) {
             boolean filtering = bookingFilter.isActive();
-            binding.layoutEmpty.tvEmptyTitle.setText(filtering
+            tvEmptyTitle.setText(filtering
                     ? R.string.admin_booking_filter_empty_title : R.string.admin_booking_empty_title);
-            binding.layoutEmpty.tvEmptyDesc.setText(filtering
+            tvEmptyDesc.setText(filtering
                     ? R.string.admin_booking_filter_empty_desc : R.string.admin_booking_empty_desc);
         }
-        binding.layoutEmpty.getRoot().setVisibility(empty ? View.VISIBLE : View.GONE);
-        binding.lvBookings.setVisibility(empty ? View.GONE : View.VISIBLE);
+        layoutEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
+        lvBookings.setVisibility(empty ? View.GONE : View.VISIBLE);
     }
 
     private void applyChipCounts(Map<String, Integer> counts) {
         int all = counts.containsKey("all") ? counts.get("all") : 0;
-        binding.chipAll.setText(getString(R.string.admin_room_filter_format,
+        chipAll.setText(getString(R.string.admin_room_filter_format,
                 getString(R.string.admin_booking_filter_all), all));
-        binding.chipPending.setText(getString(R.string.admin_room_filter_format,
+        chipPending.setText(getString(R.string.admin_room_filter_format,
                 getString(R.string.admin_booking_filter_pending), countOf(counts, DbContract.BookingStatus.PENDING)));
-        binding.chipConfirmed.setText(getString(R.string.admin_room_filter_format,
+        chipConfirmed.setText(getString(R.string.admin_room_filter_format,
                 getString(R.string.admin_booking_filter_confirmed), countOf(counts, DbContract.BookingStatus.CONFIRMED)));
-        binding.chipCheckedIn.setText(getString(R.string.admin_room_filter_format,
+        chipCheckedIn.setText(getString(R.string.admin_room_filter_format,
                 getString(R.string.admin_booking_filter_checked_in), countOf(counts, DbContract.BookingStatus.CHECKED_IN)));
-        binding.chipCompleted.setText(getString(R.string.admin_room_filter_format,
+        chipCompleted.setText(getString(R.string.admin_room_filter_format,
                 getString(R.string.admin_booking_filter_completed), countOf(counts, DbContract.BookingStatus.COMPLETED)));
-        binding.chipCancelled.setText(getString(R.string.admin_room_filter_format,
+        chipCancelled.setText(getString(R.string.admin_room_filter_format,
                 getString(R.string.admin_booking_filter_cancelled), countOf(counts, DbContract.BookingStatus.CANCELLED)));
     }
 
@@ -335,7 +397,7 @@ public class AdminBookingFragment extends Fragment implements AdminBookingAdapte
             }
             final boolean fOk = ok;
             mainHandler.post(() -> {
-                if (binding == null) return;
+                if (rootView == null) return;
                 showMessage(fOk ? R.string.admin_booking_confirm_success : R.string.admin_booking_confirm_error);
                 loadData(); // luôn tải lại: thất bại thường do đơn đã đổi trạng thái, cần cập nhật dòng cũ
             });
@@ -374,7 +436,7 @@ public class AdminBookingFragment extends Fragment implements AdminBookingAdapte
             }
             final boolean fOk = ok;
             mainHandler.post(() -> {
-                if (binding == null) return;
+                if (rootView == null) return;
                 showMessage(fOk ? R.string.admin_booking_reject_success : R.string.admin_booking_reject_error);
                 loadData();
             });
@@ -408,7 +470,7 @@ public class AdminBookingFragment extends Fragment implements AdminBookingAdapte
             final List<Room> fRooms = rooms;
             final boolean fFailed = failed;
             mainHandler.post(() -> {
-                if (binding == null) return;
+                if (rootView == null) return;
                 if (fFailed) {
                     showMessage(R.string.admin_booking_checkin_error);
                     return;
@@ -447,7 +509,7 @@ public class AdminBookingFragment extends Fragment implements AdminBookingAdapte
             }
             final boolean fOk = ok;
             mainHandler.post(() -> {
-                if (binding == null) return;
+                if (rootView == null) return;
                 showMessage(fOk ? R.string.admin_booking_checkin_success : R.string.admin_booking_checkin_error);
                 loadData();
             });
@@ -474,7 +536,7 @@ public class AdminBookingFragment extends Fragment implements AdminBookingAdapte
             }
             final boolean fOk = ok;
             mainHandler.post(() -> {
-                if (binding == null) return;
+                if (rootView == null) return;
                 showMessage(fOk ? R.string.admin_booking_checkout_success : R.string.admin_booking_checkout_error);
                 loadData();
             });

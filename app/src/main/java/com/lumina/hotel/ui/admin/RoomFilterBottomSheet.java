@@ -10,12 +10,12 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.snackbar.Snackbar;
 import com.lumina.hotel.R;
 import com.lumina.hotel.data.dao.RoomDao;
-import com.lumina.hotel.databinding.BottomSheetFilterRoomBinding;
 import com.lumina.hotel.model.RoomFilter;
 import com.lumina.hotel.model.RoomType;
 
@@ -32,7 +32,12 @@ public class RoomFilterBottomSheet extends BottomSheetDialogFragment {
         void onFilterApplied(RoomFilter filter);
     }
 
-    private BottomSheetFilterRoomBinding binding;
+    private View rootView;
+    private ChipGroup cgFilterType;
+    private ChipGroup cgFilterFloor;
+    private MaterialButton btnFilterReset;
+    private MaterialButton btnFilterApply;
+
     private ExecutorService executor;
     private RoomFilter working;
 
@@ -48,22 +53,27 @@ public class RoomFilterBottomSheet extends BottomSheetDialogFragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        binding = BottomSheetFilterRoomBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        rootView = inflater.inflate(R.layout.bottom_sheet_filter_room, container, false);
+        return rootView;
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        cgFilterType = view.findViewById(R.id.cgFilterType);
+        cgFilterFloor = view.findViewById(R.id.cgFilterFloor);
+        btnFilterReset = view.findViewById(R.id.btnFilterReset);
+        btnFilterApply = view.findViewById(R.id.btnFilterApply);
+
         String raw = getArguments() != null ? getArguments().getString(ARG_FILTER, "") : "";
         working = RoomFilter.parse(raw);
 
-        binding.btnFilterReset.setOnClickListener(v -> {
-            binding.cgFilterType.clearCheck();
-            binding.cgFilterFloor.clearCheck();
+        btnFilterReset.setOnClickListener(v -> {
+            cgFilterType.clearCheck();
+            cgFilterFloor.clearCheck();
         });
-        binding.btnFilterApply.setOnClickListener(v -> applyAndClose());
+        btnFilterApply.setOnClickListener(v -> applyAndClose());
 
         loadOptions();
     }
@@ -81,8 +91,8 @@ public class RoomFilterBottomSheet extends BottomSheetDialogFragment {
                 });
             } catch (Exception e) {
                 runOnUi(() -> {
-                    if (binding != null) {
-                        Snackbar.make(binding.getRoot(),
+                    if (rootView != null) {
+                        Snackbar.make(rootView,
                                 R.string.admin_room_filter_options_error,
                                 Snackbar.LENGTH_LONG).show();
                     }
@@ -94,29 +104,29 @@ public class RoomFilterBottomSheet extends BottomSheetDialogFragment {
     private void runOnUi(Runnable action) {
         if (!isAdded() || getActivity() == null) return;
         getActivity().runOnUiThread(() -> {
-            if (binding != null) action.run();
+            if (rootView != null) action.run();
         });
     }
 
     private void buildTypeChips(List<RoomType> types) {
-        binding.cgFilterType.removeAllViews();
+        cgFilterType.removeAllViews();
         for (RoomType type : types) {
-            Chip chip = createChip(binding.cgFilterType);
+            Chip chip = createChip(cgFilterType);
             chip.setTag(type.getId());
             chip.setText(type.getTypeName());
             chip.setChecked(working.getTypeIds().contains(type.getId()));
-            binding.cgFilterType.addView(chip);
+            cgFilterType.addView(chip);
         }
     }
 
     private void buildFloorChips(List<Integer> floors) {
-        binding.cgFilterFloor.removeAllViews();
+        cgFilterFloor.removeAllViews();
         for (Integer floor : floors) {
-            Chip chip = createChip(binding.cgFilterFloor);
+            Chip chip = createChip(cgFilterFloor);
             chip.setTag(floor);
             chip.setText(getString(R.string.admin_room_filter_floor_format, floor));
             chip.setChecked(working.getFloors().contains(floor));
-            binding.cgFilterFloor.addView(chip);
+            cgFilterFloor.addView(chip);
         }
     }
 
@@ -129,12 +139,12 @@ public class RoomFilterBottomSheet extends BottomSheetDialogFragment {
 
     private void applyAndClose() {
         RoomFilter result = RoomFilter.parse("");
-        for (int i = 0; i < binding.cgFilterType.getChildCount(); i++) {
-            Chip chip = (Chip) binding.cgFilterType.getChildAt(i);
+        for (int i = 0; i < cgFilterType.getChildCount(); i++) {
+            Chip chip = (Chip) cgFilterType.getChildAt(i);
             if (chip.isChecked()) result.getTypeIds().add((Integer) chip.getTag());
         }
-        for (int i = 0; i < binding.cgFilterFloor.getChildCount(); i++) {
-            Chip chip = (Chip) binding.cgFilterFloor.getChildAt(i);
+        for (int i = 0; i < cgFilterFloor.getChildCount(); i++) {
+            Chip chip = (Chip) cgFilterFloor.getChildAt(i);
             if (chip.isChecked()) result.getFloors().add((Integer) chip.getTag());
         }
 
@@ -154,6 +164,10 @@ public class RoomFilterBottomSheet extends BottomSheetDialogFragment {
             executor.shutdownNow();
             executor = null;
         }
-        binding = null;
+        rootView = null;
+        cgFilterType = null;
+        cgFilterFloor = null;
+        btnFilterReset = null;
+        btnFilterApply = null;
     }
 }

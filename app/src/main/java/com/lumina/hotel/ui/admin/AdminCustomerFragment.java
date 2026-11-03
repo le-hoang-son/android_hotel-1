@@ -9,6 +9,11 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.ListView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -18,10 +23,10 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.lumina.hotel.R;
 import com.lumina.hotel.adapter.CustomerAdapter;
 import com.lumina.hotel.data.dao.UserDao;
-import com.lumina.hotel.databinding.FragmentAdminCustomerBinding;
 import com.lumina.hotel.model.CustomerFilter;
 import com.lumina.hotel.model.CustomerStat;
 import com.lumina.hotel.util.AppExecutors;
@@ -39,7 +44,20 @@ import java.util.Locale;
 public class AdminCustomerFragment extends Fragment
         implements CustomerFilterBottomSheet.OnFilterAppliedListener {
 
-    private FragmentAdminCustomerBinding binding;
+    private View rootView;
+    private TextView tvAdminLabel;
+    private ImageButton btnFilter;
+    private EditText edtSearch;
+    private ImageButton btnClearSearch;
+    private ChipGroup cgActiveFilters;
+    private View svActiveFilters;
+    private View cvFilterBadge;
+    private ProgressBar pbLoading;
+    private View layoutEmpty;
+    private TextView tvCustomerCount;
+    private TextView tvEmptyMessage;
+    private ListView lvCustomers;
+
     private UserDao userDao;
     private CustomerAdapter adapter;
     private CustomerFilter filter = new CustomerFilter();
@@ -56,21 +74,35 @@ public class AdminCustomerFragment extends Fragment
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        binding = FragmentAdminCustomerBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        rootView = inflater.inflate(R.layout.fragment_admin_customer, container, false);
+        return rootView;
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        tvAdminLabel = view.findViewById(R.id.tvAdminLabel);
+        btnFilter = view.findViewById(R.id.btnFilter);
+        edtSearch = view.findViewById(R.id.edtSearch);
+        btnClearSearch = view.findViewById(R.id.btnClearSearch);
+        cgActiveFilters = view.findViewById(R.id.cgActiveFilters);
+        svActiveFilters = view.findViewById(R.id.svActiveFilters);
+        cvFilterBadge = view.findViewById(R.id.cvFilterBadge);
+        pbLoading = view.findViewById(R.id.pbLoading);
+        layoutEmpty = view.findViewById(R.id.layoutEmpty);
+        tvCustomerCount = view.findViewById(R.id.tvCustomerCount);
+        tvEmptyMessage = view.findViewById(R.id.tvEmptyMessage);
+        lvCustomers = view.findViewById(R.id.lvCustomers);
+
         userDao = new UserDao(requireContext());
         filter = CustomerFilter.load(requireContext());
         setupHeaderInset();
 
         adapter = new CustomerAdapter(this::showCustomerDetail);
-        binding.lvCustomers.setAdapter(adapter);
+        lvCustomers.setAdapter(adapter);
 
-        binding.btnFilter.setOnClickListener(v -> openFilterSheet());
+        btnFilter.setOnClickListener(v -> openFilterSheet());
 
         setupSearch();
         renderActiveFilters();
@@ -85,31 +117,31 @@ public class AdminCustomerFragment extends Fragment
      */
     private void setupHeaderInset() {
         ViewGroup.MarginLayoutParams base =
-                (ViewGroup.MarginLayoutParams) binding.tvAdminLabel.getLayoutParams();
+                (ViewGroup.MarginLayoutParams) tvAdminLabel.getLayoutParams();
         labelBaseMarginTop = base.topMargin;
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (v, insets) -> {
-            if (binding == null) return insets;
+        ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, insets) -> {
+            if (rootView == null) return insets;
             Insets sb = insets.getInsets(WindowInsetsCompat.Type.statusBars());
             ViewGroup.MarginLayoutParams lp =
-                    (ViewGroup.MarginLayoutParams) binding.tvAdminLabel.getLayoutParams();
+                    (ViewGroup.MarginLayoutParams) tvAdminLabel.getLayoutParams();
             lp.topMargin = labelBaseMarginTop + sb.top;
-            binding.tvAdminLabel.setLayoutParams(lp);
+            tvAdminLabel.setLayoutParams(lp);
             return insets;
         });
-        ViewCompat.requestApplyInsets(binding.getRoot());
+        ViewCompat.requestApplyInsets(rootView);
     }
 
     // ---------------- TÌM KIẾM ----------------
 
     private void setupSearch() {
-        binding.edtSearch.addTextChangedListener(new TextWatcher() {
+        edtSearch.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                binding.btnClearSearch.setVisibility(
+                btnClearSearch.setVisibility(
                         s.length() > 0 ? View.VISIBLE : View.GONE);
 
                 if (pendingSearch != null) searchHandler.removeCallbacks(pendingSearch);
@@ -122,11 +154,11 @@ public class AdminCustomerFragment extends Fragment
             public void afterTextChanged(Editable s) { }
         });
 
-        binding.btnClearSearch.setOnClickListener(v -> binding.edtSearch.setText(""));
+        btnClearSearch.setOnClickListener(v -> edtSearch.setText(""));
     }
 
     private String currentKeyword() {
-        return binding != null ? binding.edtSearch.getText().toString() : "";
+        return edtSearch != null ? edtSearch.getText().toString() : "";
     }
 
     // ---------------- BỘ LỌC NÂNG CAO ----------------
@@ -141,7 +173,7 @@ public class AdminCustomerFragment extends Fragment
     @Override
     public void onFilterApplied(CustomerFilter newFilter) {
         filter = newFilter;
-        if (binding == null) return;
+        if (rootView == null) return;
         renderActiveFilters();
         loadCustomers(currentKeyword());
     }
@@ -156,9 +188,9 @@ public class AdminCustomerFragment extends Fragment
     /** Vẽ lại hàng chip "đang áp dụng" + chấm vàng trên icon phễu. */
     private void renderActiveFilters() {
         boolean active = filter.isActive();
-        binding.cgActiveFilters.removeAllViews();
-        binding.svActiveFilters.setVisibility(active ? View.VISIBLE : View.GONE);
-        binding.cvFilterBadge.setVisibility(active ? View.VISIBLE : View.GONE);
+        cgActiveFilters.removeAllViews();
+        svActiveFilters.setVisibility(active ? View.VISIBLE : View.GONE);
+        cvFilterBadge.setVisibility(active ? View.VISIBLE : View.GONE);
         if (!active) return;
 
         // Chip lịch sử đặt phòng
@@ -201,14 +233,14 @@ public class AdminCustomerFragment extends Fragment
 
     private void addActiveChip(String label, Runnable onRemove) {
         Chip chip = (Chip) getLayoutInflater()
-                .inflate(R.layout.chip_filter_option, binding.cgActiveFilters, false);
+                .inflate(R.layout.chip_filter_option, cgActiveFilters, false);
         chip.setId(View.generateViewId());
         chip.setCheckable(false);
         chip.setText(label);
         chip.setCloseIconVisible(true);
         chip.setCloseIconContentDescription(getString(R.string.admin_room_filter_cd_remove, label));
         chip.setOnCloseIconClickListener(v -> onRemove.run());
-        binding.cgActiveFilters.addView(chip);
+        cgActiveFilters.addView(chip);
     }
 
     private String formatDate(long millis) {
@@ -218,8 +250,8 @@ public class AdminCustomerFragment extends Fragment
     // ---------------- TẢI DANH SÁCH ----------------
 
     private void loadCustomers(@Nullable String keyword) {
-        binding.pbLoading.setVisibility(View.VISIBLE);
-        binding.layoutEmpty.setVisibility(View.GONE);
+        pbLoading.setVisibility(View.VISIBLE);
+        layoutEmpty.setVisibility(View.GONE);
 
         final int seq = ++loadSeq;
         final CustomerFilter f = filter.copy();
@@ -235,26 +267,26 @@ public class AdminCustomerFragment extends Fragment
             if (activity == null) return; // Fragment đã bị huỷ trong lúc chờ
 
             activity.runOnUiThread(() -> {
-                if (binding == null || seq != loadSeq) return; // view đã huỷ / có lần tải mới hơn
+                if (rootView == null || seq != loadSeq) return; // view đã huỷ / có lần tải mới hơn
 
-                binding.pbLoading.setVisibility(View.GONE);
-                binding.tvCustomerCount.setText(
+                pbLoading.setVisibility(View.GONE);
+                tvCustomerCount.setText(
                         getString(R.string.customer_count_format, count));
 
                 if (data.isEmpty()) {
                     if (f.isActive()) {
-                        binding.tvEmptyMessage.setText(getString(
+                        tvEmptyMessage.setText(getString(
                                 R.string.admin_customer_filter_empty_format,
                                 getString(R.string.admin_customer_filter_empty_title),
                                 getString(R.string.admin_customer_filter_empty_desc)));
                     } else {
-                        binding.tvEmptyMessage.setText(R.string.empty_customer_search);
+                        tvEmptyMessage.setText(R.string.empty_customer_search);
                     }
-                    binding.layoutEmpty.setVisibility(View.VISIBLE);
-                    binding.lvCustomers.setVisibility(View.GONE);
+                    layoutEmpty.setVisibility(View.VISIBLE);
+                    lvCustomers.setVisibility(View.GONE);
                 } else {
-                    binding.layoutEmpty.setVisibility(View.GONE);
-                    binding.lvCustomers.setVisibility(View.VISIBLE);
+                    layoutEmpty.setVisibility(View.GONE);
+                    lvCustomers.setVisibility(View.VISIBLE);
                     adapter.setData(data);
                 }
             });
@@ -264,7 +296,7 @@ public class AdminCustomerFragment extends Fragment
     private void showCustomerDetail(CustomerStat stat) {
         CustomerDetailBottomSheet.newInstance(stat, () -> {
                     // Đổi VIP có thể làm khách rơi khỏi danh sách đang lọc — hành vi đúng.
-                    if (binding != null) loadCustomers(currentKeyword());
+                    if (rootView != null) loadCustomers(currentKeyword());
                 })
                 .show(getParentFragmentManager(), "customer_detail");
     }
@@ -273,6 +305,18 @@ public class AdminCustomerFragment extends Fragment
     public void onDestroyView() {
         super.onDestroyView();
         if (pendingSearch != null) searchHandler.removeCallbacks(pendingSearch);
-        binding = null;
+        rootView = null;
+        tvAdminLabel = null;
+        btnFilter = null;
+        edtSearch = null;
+        btnClearSearch = null;
+        cgActiveFilters = null;
+        svActiveFilters = null;
+        cvFilterBadge = null;
+        pbLoading = null;
+        layoutEmpty = null;
+        tvCustomerCount = null;
+        tvEmptyMessage = null;
+        lvCustomers = null;
     }
 }

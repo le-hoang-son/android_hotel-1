@@ -1,6 +1,7 @@
 package com.lumina.hotel.ui.admin;
 
 import android.os.Bundle;
+import android.view.View;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
@@ -9,26 +10,27 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.lumina.hotel.R;
-import com.lumina.hotel.databinding.ActivityAdminMainBinding;
 
 public class AdminMainActivity extends AppCompatActivity {
 
-    private ActivityAdminMainBinding binding;
+    private BottomNavigationView bnvAdmin;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
 
-        binding = ActivityAdminMainBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        setContentView(R.layout.activity_admin_main);
+        bnvAdmin = findViewById(R.id.bnvAdmin);
 
         // Header navy của các tab tự cộng chiều cao status bar (xem setupHeaderInset ở từng Fragment),
         // nên Activity KHÔNG được padding top nữa, nếu không sẽ bị cộng đôi.
-        ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (v, insets) -> {
+        View rootView = findViewById(android.R.id.content);
+        ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            binding.bnvAdmin.setPadding(0, 0, 0, systemBars.bottom);
+            bnvAdmin.setPadding(0, 0, 0, systemBars.bottom);
             return insets;
         });
 
@@ -38,7 +40,7 @@ public class AdminMainActivity extends AppCompatActivity {
 
         if (savedInstanceState == null) switchTab(R.id.nav_admin_dashboard);
 
-        binding.bnvAdmin.setOnItemSelectedListener(item -> {
+        bnvAdmin.setOnItemSelectedListener(item -> {
             switchTab(item.getItemId());
             return true;
         });
@@ -46,7 +48,7 @@ public class AdminMainActivity extends AppCompatActivity {
 
     /** Chuyển tab từ code (vd nút "Xem tất cả" ở Dashboard): tự cập nhật luôn tab đang sáng ở bottom nav. */
     public void openTab(int itemId) {
-        binding.bnvAdmin.setSelectedItemId(itemId); // kích hoạt listener ở trên → gọi switchTab()
+        bnvAdmin.setSelectedItemId(itemId); // kích hoạt listener ở trên → gọi switchTab()
     }
 
     public void switchTab(int itemId) {

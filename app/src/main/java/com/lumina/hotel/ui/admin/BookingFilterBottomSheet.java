@@ -15,10 +15,12 @@ import androidx.fragment.app.Fragment;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.datepicker.MaterialDatePicker;
+import com.google.android.material.textfield.TextInputEditText;
 import com.lumina.hotel.R;
-import com.lumina.hotel.databinding.BottomSheetFilterBookingBinding;
 import com.lumina.hotel.model.BookingFilter;
 
 import java.text.SimpleDateFormat;
@@ -38,7 +40,13 @@ public class BookingFilterBottomSheet extends BottomSheetDialogFragment {
         void onFilterApplied(BookingFilter filter);
     }
 
-    private BottomSheetFilterBookingBinding binding;
+    private View rootView;
+    private TextInputEditText edtFilterKeyword;
+    private ChipGroup cgFilterMethod;
+    private MaterialButton btnFilterDate;
+    private MaterialButton btnFilterDateClear;
+    private MaterialButton btnFilterReset;
+    private MaterialButton btnFilterApply;
     private BookingFilter working;
 
     public static BookingFilterBottomSheet newInstance(BookingFilter current) {
@@ -61,8 +69,8 @@ public class BookingFilterBottomSheet extends BottomSheetDialogFragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        binding = BottomSheetFilterBookingBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        rootView = inflater.inflate(R.layout.bottom_sheet_filter_booking, container, false);
+        return rootView;
     }
 
     @Override
@@ -84,35 +92,41 @@ public class BookingFilterBottomSheet extends BottomSheetDialogFragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        edtFilterKeyword = view.findViewById(R.id.edtFilterKeyword);
+        cgFilterMethod = view.findViewById(R.id.cgFilterMethod);
+        btnFilterDate = view.findViewById(R.id.btnFilterDate);
+        btnFilterDateClear = view.findViewById(R.id.btnFilterDateClear);
+        btnFilterReset = view.findViewById(R.id.btnFilterReset);
+        btnFilterApply = view.findViewById(R.id.btnFilterApply);
 
         String raw = getArguments() != null ? getArguments().getString(ARG_FILTER, "") : "";
         working = BookingFilter.parse(raw);
 
-        binding.edtFilterKeyword.setText(working.getKeyword());
+        edtFilterKeyword.setText(working.getKeyword());
         buildMethodChips();
         updateDateButton();
 
-        binding.btnFilterDate.setOnClickListener(v -> openDatePicker());
-        binding.btnFilterDateClear.setOnClickListener(v -> {
+        btnFilterDate.setOnClickListener(v -> openDatePicker());
+        btnFilterDateClear.setOnClickListener(v -> {
             working.clearDateRange();
             updateDateButton();
         });
-        binding.btnFilterReset.setOnClickListener(v -> resetInputs());
-        binding.btnFilterApply.setOnClickListener(v -> applyAndClose());
+        btnFilterReset.setOnClickListener(v -> resetInputs());
+        btnFilterApply.setOnClickListener(v -> applyAndClose());
     }
 
     // ---------------- PHƯƠNG THỨC THANH TOÁN ----------------
 
     private void buildMethodChips() {
-        binding.cgFilterMethod.removeAllViews();
+        cgFilterMethod.removeAllViews();
         for (String method : BookingFilter.ALL_METHODS) {
             Chip chip = (Chip) getLayoutInflater()
-                    .inflate(R.layout.chip_filter_option, binding.cgFilterMethod, false);
+                    .inflate(R.layout.chip_filter_option, cgFilterMethod, false);
             chip.setId(View.generateViewId());
             chip.setTag(method);
             chip.setText(methodLabelRes(method));
             chip.setChecked(working.getMethods().contains(method));
-            binding.cgFilterMethod.addView(chip);
+            cgFilterMethod.addView(chip);
         }
     }
 
@@ -132,7 +146,7 @@ public class BookingFilterBottomSheet extends BottomSheetDialogFragment {
             if (selection == null || selection.first == null || selection.second == null) return;
             working.setDateRange(utcToLocalMidnight(selection.first),
                     utcToLocalMidnight(selection.second));
-            if (binding != null) updateDateButton();
+            if (rootView != null) updateDateButton();
         });
         picker.show(getChildFragmentManager(), TAG_DATE_PICKER);
     }
@@ -151,8 +165,8 @@ public class BookingFilterBottomSheet extends BottomSheetDialogFragment {
         } else {
             text = getString(R.string.dash_pick_range);
         }
-        binding.btnFilterDate.setText(text);
-        binding.btnFilterDateClear.setVisibility(working.hasDateRange() ? View.VISIBLE : View.GONE);
+        btnFilterDate.setText(text);
+        btnFilterDateClear.setVisibility(working.hasDateRange() ? View.VISIBLE : View.GONE);
     }
 
     private static String formatDate(long millis) {
@@ -184,8 +198,8 @@ public class BookingFilterBottomSheet extends BottomSheetDialogFragment {
 
     /** Chỉ xoá lựa chọn trên giao diện — chưa lưu cho tới khi bấm "Áp dụng". */
     private void resetInputs() {
-        binding.cgFilterMethod.clearCheck();
-        binding.edtFilterKeyword.setText("");
+        cgFilterMethod.clearCheck();
+        edtFilterKeyword.setText("");
         working.clearDateRange();
         updateDateButton();
     }
@@ -193,11 +207,11 @@ public class BookingFilterBottomSheet extends BottomSheetDialogFragment {
     private void applyAndClose() {
         BookingFilter result = BookingFilter.parse("");
 
-        for (int i = 0; i < binding.cgFilterMethod.getChildCount(); i++) {
-            Chip chip = (Chip) binding.cgFilterMethod.getChildAt(i);
+        for (int i = 0; i < cgFilterMethod.getChildCount(); i++) {
+            Chip chip = (Chip) cgFilterMethod.getChildAt(i);
             if (chip.isChecked()) result.getMethods().add((String) chip.getTag());
         }
-        CharSequence kw = binding.edtFilterKeyword.getText();
+        CharSequence kw = edtFilterKeyword.getText();
         result.setKeyword(kw == null ? "" : kw.toString());
         result.setDateRange(working.getDateFrom(), working.getDateTo());
 
@@ -213,6 +227,12 @@ public class BookingFilterBottomSheet extends BottomSheetDialogFragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        binding = null;
+        rootView = null;
+        edtFilterKeyword = null;
+        cgFilterMethod = null;
+        btnFilterDate = null;
+        btnFilterDateClear = null;
+        btnFilterReset = null;
+        btnFilterApply = null;
     }
 }

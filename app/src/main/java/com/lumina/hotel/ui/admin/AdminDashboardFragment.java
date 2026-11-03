@@ -8,6 +8,9 @@ import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.content.Intent;
@@ -22,6 +25,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.core.widget.ImageViewCompat;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.XAxis;
@@ -31,13 +35,13 @@ import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter;
 import com.github.mikephil.charting.formatter.ValueFormatter;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.datepicker.MaterialDatePicker;
+import com.google.android.material.progressindicator.LinearProgressIndicator;
 
 import com.lumina.hotel.R;
 import com.lumina.hotel.data.dao.DashboardDao;
-import com.lumina.hotel.databinding.FragmentAdminDashboardBinding;
-import com.lumina.hotel.databinding.ItemLatestBookingBinding;
-import com.lumina.hotel.databinding.ItemTypeShareBinding;
 import com.lumina.hotel.model.BookingBrief;
 import com.lumina.hotel.model.TypeShareItem;
 import com.lumina.hotel.util.DateUtils;
@@ -72,7 +76,41 @@ public class AdminDashboardFragment extends Fragment {
         List<BookingBrief> latest = new ArrayList<>();
     }
 
-    private FragmentAdminDashboardBinding binding;
+    private View rootView;
+    private SwipeRefreshLayout srlDashboard;
+    private ProgressBar pbLoading;
+    private LinearLayout llAdminHeader;
+    private TextView tvGreetingAdmin;
+    private ImageView ivAdminAvatar;
+    private ChipGroup cgTimeRange;
+    private Chip chipCustom;
+    private LineChart chartRevenue;
+
+    private ImageView ivStatRevenueIcon;
+    private TextView tvStatRevenueLabel;
+    private TextView tvStatRevenueValue;
+    private TextView tvStatRevenueBadge;
+    private ImageView ivStatBookingsIcon;
+    private TextView tvStatBookingsLabel;
+    private TextView tvStatBookingsValue;
+    private TextView tvStatBookingsBadge;
+    private ImageView ivStatOccupancyIcon;
+    private TextView tvStatOccupancyLabel;
+    private TextView tvStatOccupancyValue;
+    private ImageView ivStatVacantIcon;
+    private TextView tvStatVacantLabel;
+    private TextView tvStatVacantValue;
+
+    private TextView tvHighlightText;
+    private TextView tvHighlightBadge;
+    private ImageView ivTrendIcon;
+
+    private TextView tvChartSubtitle;
+    private TextView tvChartTrend;
+    private TextView btnSeeAllBookings;
+    private LinearLayout containerTypeShare;
+    private LinearLayout containerLatestBookings;
+
     private DashboardDao dao;
     private ExecutorService executor;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -87,13 +125,53 @@ public class AdminDashboardFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        binding = FragmentAdminDashboardBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        rootView = inflater.inflate(R.layout.fragment_admin_dashboard, container, false);
+        return rootView;
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        srlDashboard = view.findViewById(R.id.srlDashboard);
+        pbLoading = view.findViewById(R.id.pbLoading);
+        llAdminHeader = view.findViewById(R.id.llAdminHeader);
+        tvGreetingAdmin = view.findViewById(R.id.tvGreetingAdmin);
+        ivAdminAvatar = view.findViewById(R.id.ivAdminAvatar);
+        cgTimeRange = view.findViewById(R.id.cgTimeRange);
+        chipCustom = view.findViewById(R.id.chipCustom);
+        chartRevenue = view.findViewById(R.id.chartRevenue);
+        tvHighlightText = view.findViewById(R.id.tvHighlightText);
+        tvHighlightBadge = view.findViewById(R.id.tvHighlightBadge);
+        ivTrendIcon = view.findViewById(R.id.ivTrendIcon);
+        tvChartSubtitle = view.findViewById(R.id.tvChartSubtitle);
+        tvChartTrend = view.findViewById(R.id.tvChartTrend);
+        btnSeeAllBookings = view.findViewById(R.id.btnSeeAllBookings);
+        containerTypeShare = view.findViewById(R.id.containerTypeShare);
+        containerLatestBookings = view.findViewById(R.id.containerLatestBookings);
+
+        View cvStatRevenue = view.findViewById(R.id.cvStatRevenue);
+        ivStatRevenueIcon = cvStatRevenue.findViewById(R.id.ivStatIcon);
+        tvStatRevenueLabel = cvStatRevenue.findViewById(R.id.tvStatLabel);
+        tvStatRevenueValue = cvStatRevenue.findViewById(R.id.tvStatValue);
+        tvStatRevenueBadge = cvStatRevenue.findViewById(R.id.tvStatBadge);
+
+        View cvStatBookings = view.findViewById(R.id.cvStatBookings);
+        ivStatBookingsIcon = cvStatBookings.findViewById(R.id.ivStatIcon);
+        tvStatBookingsLabel = cvStatBookings.findViewById(R.id.tvStatLabel);
+        tvStatBookingsValue = cvStatBookings.findViewById(R.id.tvStatValue);
+        tvStatBookingsBadge = cvStatBookings.findViewById(R.id.tvStatBadge);
+
+        View cvStatOccupancy = view.findViewById(R.id.cvStatOccupancy);
+        ivStatOccupancyIcon = cvStatOccupancy.findViewById(R.id.ivStatIcon);
+        tvStatOccupancyLabel = cvStatOccupancy.findViewById(R.id.tvStatLabel);
+        tvStatOccupancyValue = cvStatOccupancy.findViewById(R.id.tvStatValue);
+
+        View cvStatVacant = view.findViewById(R.id.cvStatVacant);
+        ivStatVacantIcon = cvStatVacant.findViewById(R.id.ivStatIcon);
+        tvStatVacantLabel = cvStatVacant.findViewById(R.id.tvStatLabel);
+        tvStatVacantValue = cvStatVacant.findViewById(R.id.tvStatValue);
+
         dao = new DashboardDao(requireContext().getApplicationContext());
         executor = Executors.newSingleThreadExecutor();
 
@@ -103,8 +181,8 @@ public class AdminDashboardFragment extends Fragment {
         setupChart();
         setupChips();
 
-        binding.srlDashboard.setColorSchemeColors(ContextCompat.getColor(requireContext(), R.color.gold));
-        binding.srlDashboard.setOnRefreshListener(this::loadDashboard);
+        srlDashboard.setColorSchemeColors(ContextCompat.getColor(requireContext(), R.color.gold));
+        srlDashboard.setOnRefreshListener(this::loadDashboard);
 
         loadDashboard();
     }
@@ -114,7 +192,37 @@ public class AdminDashboardFragment extends Fragment {
         super.onDestroyView();
         mainHandler.removeCallbacksAndMessages(null);
         if (executor != null) executor.shutdownNow();
-        binding = null;
+        rootView = null;
+        srlDashboard = null;
+        pbLoading = null;
+        llAdminHeader = null;
+        tvGreetingAdmin = null;
+        ivAdminAvatar = null;
+        cgTimeRange = null;
+        chipCustom = null;
+        chartRevenue = null;
+        ivStatRevenueIcon = null;
+        tvStatRevenueLabel = null;
+        tvStatRevenueValue = null;
+        tvStatRevenueBadge = null;
+        ivStatBookingsIcon = null;
+        tvStatBookingsLabel = null;
+        tvStatBookingsValue = null;
+        tvStatBookingsBadge = null;
+        ivStatOccupancyIcon = null;
+        tvStatOccupancyLabel = null;
+        tvStatOccupancyValue = null;
+        ivStatVacantIcon = null;
+        tvStatVacantLabel = null;
+        tvStatVacantValue = null;
+        tvHighlightText = null;
+        tvHighlightBadge = null;
+        ivTrendIcon = null;
+        tvChartSubtitle = null;
+        tvChartTrend = null;
+        btnSeeAllBookings = null;
+        containerTypeShare = null;
+        containerLatestBookings = null;
     }
 
     // =========================================================
@@ -122,38 +230,38 @@ public class AdminDashboardFragment extends Fragment {
     // =========================================================
 
     private void setupHeader() {
-        binding.tvGreetingAdmin.setText(getString(R.string.dash_greeting_admin, DateUtils.greetingByHour()));
-        binding.ivAdminAvatar.setOnClickListener(v ->
+        tvGreetingAdmin.setText(getString(R.string.dash_greeting_admin, DateUtils.greetingByHour()));
+        ivAdminAvatar.setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), AdminProfileActivity.class)));
 
         // App nhắm SDK 37 → nội dung tràn dưới thanh trạng thái: cộng chiều cao status bar vào padding trên của header.
         // Nếu Activity đã xử lý inset thì top = 0, không bị cộng đôi.
-        headerPaddingTop = binding.llAdminHeader.getPaddingTop();
-        ViewCompat.setOnApplyWindowInsetsListener(binding.llAdminHeader, (v, insets) -> {
+        headerPaddingTop = llAdminHeader.getPaddingTop();
+        ViewCompat.setOnApplyWindowInsetsListener(llAdminHeader, (v, insets) -> {
             Insets sb = insets.getInsets(WindowInsetsCompat.Type.statusBars());
             v.setPadding(v.getPaddingLeft(), headerPaddingTop + sb.top, v.getPaddingRight(), v.getPaddingBottom());
             return insets;
         });
-        ViewCompat.requestApplyInsets(binding.llAdminHeader);
+        ViewCompat.requestApplyInsets(llAdminHeader);
     }
 
     private void setupStatCards() {
-        binding.cvStatRevenue.ivStatIcon.setImageResource(R.drawable.ic_paid);
-        binding.cvStatRevenue.tvStatLabel.setText(R.string.label_total_revenue);
+        ivStatRevenueIcon.setImageResource(R.drawable.ic_paid);
+        tvStatRevenueLabel.setText(R.string.label_total_revenue);
 
-        binding.cvStatBookings.ivStatIcon.setImageResource(R.drawable.ic_event_available);
-        binding.cvStatBookings.tvStatLabel.setText(R.string.label_new_bookings);
+        ivStatBookingsIcon.setImageResource(R.drawable.ic_event_available);
+        tvStatBookingsLabel.setText(R.string.label_new_bookings);
 
-        binding.cvStatOccupancy.ivStatIcon.setImageResource(R.drawable.ic_percent);
-        binding.cvStatOccupancy.tvStatLabel.setText(R.string.label_occupancy_rate);
+        ivStatOccupancyIcon.setImageResource(R.drawable.ic_percent);
+        tvStatOccupancyLabel.setText(R.string.label_occupancy_rate);
 
-        binding.cvStatVacant.ivStatIcon.setImageResource(R.drawable.ic_meeting_room);
-        binding.cvStatVacant.tvStatLabel.setText(R.string.label_vacant_rooms);
+        ivStatVacantIcon.setImageResource(R.drawable.ic_meeting_room);
+        tvStatVacantLabel.setText(R.string.label_vacant_rooms);
         // "Tỷ lệ lấp phòng" và "Phòng trống": KHÔNG hiện badge % (CSDL không lưu lịch sử room_status).
     }
 
     private void setupLists() {
-        binding.btnSeeAllBookings.setOnClickListener(v -> openBookingTab());
+        btnSeeAllBookings.setOnClickListener(v -> openBookingTab());
     }
 
     private void openBookingTab() {
@@ -163,7 +271,7 @@ public class AdminDashboardFragment extends Fragment {
     }
 
     private void setupChart() {
-        LineChart c = binding.chartRevenue;
+        LineChart c = chartRevenue;
         int muted = ContextCompat.getColor(requireContext(), R.color.muted);
         int line = ContextCompat.getColor(requireContext(), R.color.line);
 
@@ -199,9 +307,9 @@ public class AdminDashboardFragment extends Fragment {
 
     private void setupChips() {
         lastPresetChipId = R.id.chipMonth;
-        binding.cgTimeRange.setSelectionRequired(true);
+        cgTimeRange.setSelectionRequired(true);
 
-        binding.cgTimeRange.setOnCheckedStateChangeListener((group, ids) -> {
+        cgTimeRange.setOnCheckedStateChangeListener((group, ids) -> {
             if (ids.isEmpty()) return;
             int id = ids.get(0);
             if (id == R.id.chipCustom) {
@@ -212,14 +320,14 @@ public class AdminDashboardFragment extends Fragment {
             lastPresetChipId = id;
             customFrom = 0;
             customTo = 0;
-            binding.chipCustom.setText(R.string.chip_time_custom);
+            chipCustom.setText(R.string.chip_time_custom);
             if (id == R.id.chipToday) mode = Mode.TODAY;
             else if (id == R.id.chipWeek) mode = Mode.WEEK;
             else mode = Mode.MONTH;
             loadDashboard();
         });
 
-        binding.chipCustom.setOnClickListener(v -> showRangePicker());
+        chipCustom.setOnClickListener(v -> showRangePicker());
     }
 
     private void showRangePicker() {
@@ -229,17 +337,17 @@ public class AdminDashboardFragment extends Fragment {
         MaterialDatePicker<Pair<Long, Long>> picker = b.build();
 
         picker.addOnPositiveButtonClickListener(sel -> {
-            if (binding == null || sel.first == null || sel.second == null) return;
+            if (rootView == null || sel.first == null || sel.second == null) return;
             customFrom = utcToLocalDayStart(sel.first);
             customTo = utcToLocalDayStart(sel.second) + DateUtils.ONE_DAY - 1;
             mode = Mode.CUSTOM;
-            binding.chipCustom.setText(getString(R.string.dash_range_format,
+            chipCustom.setText(getString(R.string.dash_range_format,
                     DateUtils.formatDayMonth(customFrom), DateUtils.formatDayMonth(customTo)));
             loadDashboard();
         });
         // Đóng hộp mà chưa chọn ngày nào → trả chip về lựa chọn trước đó
         picker.addOnDismissListener(d -> {
-            if (binding != null && customFrom == 0) binding.cgTimeRange.check(lastPresetChipId);
+            if (rootView != null && customFrom == 0) cgTimeRange.check(lastPresetChipId);
         });
         picker.show(getChildFragmentManager(), "dash_range");
     }
@@ -307,22 +415,22 @@ public class AdminDashboardFragment extends Fragment {
     }
 
     private void loadDashboard() {
-        if (binding == null || executor == null || executor.isShutdown()) return;
+        if (rootView == null || executor == null || executor.isShutdown()) return;
         final long[] r = computeRange();
         final int token = ++loadToken;
-        if (!binding.srlDashboard.isRefreshing()) binding.pbLoading.setVisibility(View.VISIBLE);
+        if (!srlDashboard.isRefreshing()) pbLoading.setVisibility(View.VISIBLE);
 
         executor.execute(() -> {
             try {
                 DashData d = query(r);
                 mainHandler.post(() -> {
-                    if (binding == null || token != loadToken) return;
+                    if (rootView == null || token != loadToken) return;
                     render(d, r);
                     finishLoading();
                 });
             } catch (Exception e) {
                 mainHandler.post(() -> {
-                    if (binding == null || token != loadToken) return;
+                    if (rootView == null || token != loadToken) return;
                     finishLoading();
                     Toast.makeText(requireContext(), R.string.dash_load_error, Toast.LENGTH_SHORT).show();
                 });
@@ -346,8 +454,8 @@ public class AdminDashboardFragment extends Fragment {
     }
 
     private void finishLoading() {
-        binding.pbLoading.setVisibility(View.GONE);
-        binding.srlDashboard.setRefreshing(false);
+        pbLoading.setVisibility(View.GONE);
+        srlDashboard.setRefreshing(false);
     }
 
     // =========================================================
@@ -359,20 +467,20 @@ public class AdminDashboardFragment extends Fragment {
         Integer bookDelta = deltaPercent(d.bookings, d.prevBookings);
 
         // 4 thẻ chỉ số
-        binding.cvStatRevenue.tvStatValue.setText(PriceUtils.formatShort(d.revenue));
-        bindDeltaBadge(binding.cvStatRevenue.tvStatBadge, revDelta);
+        tvStatRevenueValue.setText(PriceUtils.formatShort(d.revenue));
+        bindDeltaBadge(tvStatRevenueBadge, revDelta);
 
-        binding.cvStatBookings.tvStatValue.setText(String.valueOf(d.bookings));
-        bindDeltaBadge(binding.cvStatBookings.tvStatBadge, bookDelta);
+        tvStatBookingsValue.setText(String.valueOf(d.bookings));
+        bindDeltaBadge(tvStatBookingsBadge, bookDelta);
 
-        binding.cvStatOccupancy.tvStatValue.setText(getString(R.string.dash_percent, Math.round(d.occupancyRate)));
-        binding.cvStatVacant.tvStatValue.setText(String.valueOf(d.vacant));
+        tvStatOccupancyValue.setText(getString(R.string.dash_percent, Math.round(d.occupancyRate)));
+        tvStatVacantValue.setText(String.valueOf(d.vacant));
 
         // Dải thông báo nổi bật (so sánh doanh thu)
         renderHighlight(revDelta);
 
         // Biểu đồ
-        binding.tvChartSubtitle.setText(getString(R.string.dash_range_format,
+        tvChartSubtitle.setText(getString(R.string.dash_range_format,
                 DateUtils.formatDayMonth(r[0]), DateUtils.formatDayMonth(r[1])));
         renderChartTrend(revDelta);
         renderChart(d.labels, d.values);
@@ -384,43 +492,51 @@ public class AdminDashboardFragment extends Fragment {
 
     /** Vẽ danh sách "Tỷ trọng theo loại phòng" vào LinearLayout (thay cho RecyclerView). */
     private void renderTypeShare(List<TypeShareItem> list) {
-        binding.containerTypeShare.removeAllViews();
+        containerTypeShare.removeAllViews();
         LayoutInflater inflater = LayoutInflater.from(requireContext());
         for (TypeShareItem item : list) {
-            ItemTypeShareBinding b = ItemTypeShareBinding.inflate(
-                    inflater, binding.containerTypeShare, false);
-            b.tvTypeName.setText(item.getTypeName());
-            b.tvTypePercent.setText(getString(R.string.dash_percent, item.getPercent()));
-            b.tvTypeCount.setText(getString(R.string.dash_type_count, item.getCount()));
-            b.lpiTypeShare.setProgress(item.getPercent());
-            binding.containerTypeShare.addView(b.getRoot());
+            View row = inflater.inflate(R.layout.item_type_share, containerTypeShare, false);
+            TextView tvTypeName = row.findViewById(R.id.tvTypeName);
+            TextView tvTypePercent = row.findViewById(R.id.tvTypePercent);
+            TextView tvTypeCount = row.findViewById(R.id.tvTypeCount);
+            LinearProgressIndicator lpiTypeShare = row.findViewById(R.id.lpiTypeShare);
+
+            tvTypeName.setText(item.getTypeName());
+            tvTypePercent.setText(getString(R.string.dash_percent, item.getPercent()));
+            tvTypeCount.setText(getString(R.string.dash_type_count, item.getCount()));
+            lpiTypeShare.setProgress(item.getPercent());
+            containerTypeShare.addView(row);
         }
     }
 
     /** Vẽ danh sách "Đơn mới nhất" vào LinearLayout (thay cho RecyclerView). */
     private void renderLatestBookings(List<BookingBrief> list) {
-        binding.containerLatestBookings.removeAllViews();
+        containerLatestBookings.removeAllViews();
         LayoutInflater inflater = LayoutInflater.from(requireContext());
         for (BookingBrief item : list) {
-            ItemLatestBookingBinding b = ItemLatestBookingBinding.inflate(
-                    inflater, binding.containerLatestBookings, false);
+            View row = inflater.inflate(R.layout.item_latest_booking, containerLatestBookings, false);
+            TextView tvGuestName = row.findViewById(R.id.tvGuestName);
+            TextView tvGuestInitial = row.findViewById(R.id.tvGuestInitial);
+            TextView tvBookingMeta = row.findViewById(R.id.tvBookingMeta);
+            TextView tvBookingAmount = row.findViewById(R.id.tvBookingAmount);
+            TextView tvBookingStatus = row.findViewById(R.id.tvBookingStatus);
 
             String name = item.getGuestName() == null ? "" : item.getGuestName().trim();
-            b.tvGuestName.setText(name);
-            b.tvGuestInitial.setText(initialOf(name));
-            b.tvBookingMeta.setText(getString(R.string.dash_booking_meta,
+            tvGuestName.setText(name);
+            tvGuestInitial.setText(initialOf(name));
+            tvBookingMeta.setText(getString(R.string.dash_booking_meta,
                     item.getRoomTypeName(), item.getCheckInLabel(), item.getNumNights()));
-            b.tvBookingAmount.setText(PriceUtils.formatVnd(item.getTotalAmount()));
+            tvBookingAmount.setText(PriceUtils.formatVnd(item.getTotalAmount()));
 
             if (item.getStatus() == null) {
-                b.tvBookingStatus.setVisibility(View.GONE);
+                tvBookingStatus.setVisibility(View.GONE);
             } else {
-                b.tvBookingStatus.setVisibility(View.VISIBLE);
-                StatusUtils.applyBookingStatus(b.tvBookingStatus, item.getStatus());
+                tvBookingStatus.setVisibility(View.VISIBLE);
+                StatusUtils.applyBookingStatus(tvBookingStatus, item.getStatus());
             }
 
-            b.getRoot().setOnClickListener(v -> openBookingTab());
-            binding.containerLatestBookings.addView(b.getRoot());
+            row.setOnClickListener(v -> openBookingTab());
+            containerLatestBookings.addView(row);
         }
     }
 
@@ -439,26 +555,26 @@ public class AdminDashboardFragment extends Fragment {
         String prevName = getString(prevPeriodNameRes());
 
         if (delta == null) {
-            binding.tvHighlightText.setText(R.string.dash_highlight_none);
-            binding.tvHighlightBadge.setVisibility(View.GONE);
-            binding.ivTrendIcon.setImageResource(R.drawable.ic_trending_up);
-            ImageViewCompat.setImageTintList(binding.ivTrendIcon, ColorStateList.valueOf(muted));
+            tvHighlightText.setText(R.string.dash_highlight_none);
+            tvHighlightBadge.setVisibility(View.GONE);
+            ivTrendIcon.setImageResource(R.drawable.ic_trending_up);
+            ImageViewCompat.setImageTintList(ivTrendIcon, ColorStateList.valueOf(muted));
             return;
         }
-        binding.tvHighlightBadge.setVisibility(View.VISIBLE);
-        bindDeltaBadge(binding.tvHighlightBadge, delta);
+        tvHighlightBadge.setVisibility(View.VISIBLE);
+        bindDeltaBadge(tvHighlightBadge, delta);
         if (delta > 0) {
-            binding.tvHighlightText.setText(getString(R.string.dash_highlight_up, prevName));
-            binding.ivTrendIcon.setImageResource(R.drawable.ic_trending_up);
-            ImageViewCompat.setImageTintList(binding.ivTrendIcon, ColorStateList.valueOf(green));
+            tvHighlightText.setText(getString(R.string.dash_highlight_up, prevName));
+            ivTrendIcon.setImageResource(R.drawable.ic_trending_up);
+            ImageViewCompat.setImageTintList(ivTrendIcon, ColorStateList.valueOf(green));
         } else if (delta < 0) {
-            binding.tvHighlightText.setText(getString(R.string.dash_highlight_down, prevName));
-            binding.ivTrendIcon.setImageResource(R.drawable.ic_trending_down);
-            ImageViewCompat.setImageTintList(binding.ivTrendIcon, ColorStateList.valueOf(red));
+            tvHighlightText.setText(getString(R.string.dash_highlight_down, prevName));
+            ivTrendIcon.setImageResource(R.drawable.ic_trending_down);
+            ImageViewCompat.setImageTintList(ivTrendIcon, ColorStateList.valueOf(red));
         } else {
-            binding.tvHighlightText.setText(getString(R.string.dash_highlight_same, prevName));
-            binding.ivTrendIcon.setImageResource(R.drawable.ic_trending_up);
-            ImageViewCompat.setImageTintList(binding.ivTrendIcon, ColorStateList.valueOf(muted));
+            tvHighlightText.setText(getString(R.string.dash_highlight_same, prevName));
+            ivTrendIcon.setImageResource(R.drawable.ic_trending_up);
+            ImageViewCompat.setImageTintList(ivTrendIcon, ColorStateList.valueOf(muted));
         }
     }
 
@@ -473,7 +589,7 @@ public class AdminDashboardFragment extends Fragment {
     }
 
     private void renderChartTrend(@Nullable Integer delta) {
-        TextView tv = binding.tvChartTrend;
+        TextView tv = tvChartTrend;
         if (delta == null) {
             tv.setVisibility(View.INVISIBLE);
             return;
@@ -486,7 +602,7 @@ public class AdminDashboardFragment extends Fragment {
     }
 
     private void renderChart(List<String> labels, List<Long> values) {
-        LineChart c = binding.chartRevenue;
+        LineChart c = chartRevenue;
         if (values.isEmpty()) {
             c.clear();
             c.invalidate();

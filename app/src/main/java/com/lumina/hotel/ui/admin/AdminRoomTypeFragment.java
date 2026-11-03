@@ -7,6 +7,9 @@ import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ListView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -15,12 +18,12 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 import com.lumina.hotel.R;
 import com.lumina.hotel.adapter.AdminRoomTypeAdapter;
 import com.lumina.hotel.data.dao.RoomTypeDao;
-import com.lumina.hotel.databinding.FragmentAdminRoomTypeBinding;
 import com.lumina.hotel.model.RoomType;
 
 import java.util.ArrayList;
@@ -37,7 +40,18 @@ public class AdminRoomTypeFragment extends Fragment
     private static final int DELETE_ERROR = 2;
     private static final int DELETE_BLOCKED_HISTORY = 3;
 
-    private FragmentAdminRoomTypeBinding binding;
+    private View rootView;
+    private View llAdminHeader;
+    private ListView lvRoomTypes;
+    private TextView tvStatTypesValue;
+    private TextView tvStatRoomsValue;
+    private ProgressBar pbLoading;
+    private View layoutEmpty;
+    private TextView tvEmptyTitle;
+    private TextView tvEmptyDesc;
+    private View btnEmptyAction;
+    private MaterialButton btnAddNew;
+
     private RoomTypeDao dao;
     private ExecutorService executor;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -50,26 +64,38 @@ public class AdminRoomTypeFragment extends Fragment
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        binding = FragmentAdminRoomTypeBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        rootView = inflater.inflate(R.layout.fragment_admin_room_type, container, false);
+        return rootView;
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        llAdminHeader = view.findViewById(R.id.llAdminHeader);
+        lvRoomTypes = view.findViewById(R.id.lvRoomTypes);
+        tvStatTypesValue = view.findViewById(R.id.tvStatTypesValue);
+        tvStatRoomsValue = view.findViewById(R.id.tvStatRoomsValue);
+        pbLoading = view.findViewById(R.id.pbLoading);
+        layoutEmpty = view.findViewById(R.id.layoutEmpty);
+        tvEmptyTitle = layoutEmpty.findViewById(R.id.tvEmptyTitle);
+        tvEmptyDesc = layoutEmpty.findViewById(R.id.tvEmptyDesc);
+        btnEmptyAction = layoutEmpty.findViewById(R.id.btnEmptyAction);
+        btnAddNew = view.findViewById(R.id.btnAddNew);
+
         dao = new RoomTypeDao(requireContext().getApplicationContext());
         executor = Executors.newSingleThreadExecutor();
 
         setupHeaderInset();
 
         adapter = new AdminRoomTypeAdapter(this);
-        binding.lvRoomTypes.setAdapter(adapter);
+        lvRoomTypes.setAdapter(adapter);
 
-        binding.layoutEmpty.tvEmptyTitle.setText(R.string.admin_room_type_empty_title);
-        binding.layoutEmpty.tvEmptyDesc.setText(R.string.admin_room_type_empty_desc);
-        binding.layoutEmpty.btnEmptyAction.setVisibility(View.GONE);
+        tvEmptyTitle.setText(R.string.admin_room_type_empty_title);
+        tvEmptyDesc.setText(R.string.admin_room_type_empty_desc);
+        btnEmptyAction.setVisibility(View.GONE);
 
-        binding.btnAddNew.setOnClickListener(v -> openForm(0));
+        btnAddNew.setOnClickListener(v -> openForm(0));
     }
 
     /** Thêm/sửa xong quay về → tải lại danh sách. */
@@ -84,25 +110,35 @@ public class AdminRoomTypeFragment extends Fragment
         super.onDestroyView();
         mainHandler.removeCallbacksAndMessages(null);
         if (executor != null) executor.shutdownNow();
-        binding = null;
+        rootView = null;
+        llAdminHeader = null;
+        lvRoomTypes = null;
+        tvStatTypesValue = null;
+        tvStatRoomsValue = null;
+        pbLoading = null;
+        layoutEmpty = null;
+        tvEmptyTitle = null;
+        tvEmptyDesc = null;
+        btnEmptyAction = null;
+        btnAddNew = null;
     }
 
     // ---------------- GIAO DIỆN ----------------
 
     /** App nhắm SDK 37 (edge-to-edge): cộng chiều cao status bar vào padding trên của header. */
     private void setupHeaderInset() {
-        headerPaddingTop = binding.llAdminHeader.getPaddingTop();
-        ViewCompat.setOnApplyWindowInsetsListener(binding.llAdminHeader, (v, insets) -> {
+        headerPaddingTop = llAdminHeader.getPaddingTop();
+        ViewCompat.setOnApplyWindowInsetsListener(llAdminHeader, (v, insets) -> {
             Insets sb = insets.getInsets(WindowInsetsCompat.Type.statusBars());
             v.setPadding(v.getPaddingLeft(), headerPaddingTop + sb.top,
                     v.getPaddingRight(), v.getPaddingBottom());
             return insets;
         });
-        ViewCompat.requestApplyInsets(binding.llAdminHeader);
+        ViewCompat.requestApplyInsets(llAdminHeader);
     }
 
     private void showMessage(int stringRes) {
-        if (binding != null) Snackbar.make(binding.getRoot(), stringRes, Snackbar.LENGTH_LONG).show();
+        if (rootView != null) Snackbar.make(rootView, stringRes, Snackbar.LENGTH_LONG).show();
     }
 
     // ---------------- TẢI DỮ LIỆU (chạy nền) ----------------
@@ -110,7 +146,7 @@ public class AdminRoomTypeFragment extends Fragment
     private void loadData() {
         final int token = ++loadToken;
         // Chỉ hiện vòng xoay ở lần tải đầu, tránh nháy mỗi lần quay về
-        if (adapter.getCount() == 0) binding.pbLoading.setVisibility(View.VISIBLE);
+        if (adapter.getCount() == 0) pbLoading.setVisibility(View.VISIBLE);
 
         executor.execute(() -> {
             final List<RoomType> types = new ArrayList<>();
@@ -126,19 +162,19 @@ public class AdminRoomTypeFragment extends Fragment
             final boolean fFailed = failed;
 
             mainHandler.post(() -> {
-                if (binding == null || token != loadToken) return;
-                binding.pbLoading.setVisibility(View.GONE);
+                if (rootView == null || token != loadToken) return;
+                pbLoading.setVisibility(View.GONE);
                 if (fFailed) {
                     showMessage(R.string.admin_room_type_load_error);
                     return;
                 }
-                binding.tvStatTypesValue.setText(String.valueOf(stats[0]));
-                binding.tvStatRoomsValue.setText(String.valueOf(stats[1]));
+                tvStatTypesValue.setText(String.valueOf(stats[0]));
+                tvStatRoomsValue.setText(String.valueOf(stats[1]));
                 adapter.setData(types);
 
                 boolean empty = types.isEmpty();
-                binding.layoutEmpty.getRoot().setVisibility(empty ? View.VISIBLE : View.GONE);
-                binding.lvRoomTypes.setVisibility(empty ? View.GONE : View.VISIBLE);
+                layoutEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
+                lvRoomTypes.setVisibility(empty ? View.GONE : View.VISIBLE);
             });
         });
     }
@@ -189,7 +225,7 @@ public class AdminRoomTypeFragment extends Fragment
             final int fResult = result;
 
             mainHandler.post(() -> {
-                if (binding == null) return;
+                if (rootView == null) return;
                 if (fResult == DELETE_OK) {
                     showMessage(R.string.admin_room_type_delete_success);
                     loadData();

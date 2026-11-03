@@ -2,6 +2,7 @@ package com.lumina.hotel.ui.admin;
 
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -16,7 +17,6 @@ import androidx.core.view.WindowInsetsCompat;
 import com.lumina.hotel.R;
 import com.lumina.hotel.data.dao.BookingDao;
 import com.lumina.hotel.data.dao.PaymentDao;
-import com.lumina.hotel.databinding.ActivityAdminBookingDetailBinding;
 import com.lumina.hotel.model.Booking;
 import com.lumina.hotel.model.BookingWithDetail;
 import com.lumina.hotel.model.IntentKeys;
@@ -33,18 +33,79 @@ import java.util.Locale;
 /** SPEC 11 — Chi tiết đơn đặt phòng (phương án A: chỉ xem, không có nút hành động). */
 public class AdminBookingDetailActivity extends AppCompatActivity {
 
-    private ActivityAdminBookingDetailBinding binding;
+    private View layoutRoot;
+    private View layoutHeader;
+    private View svContent;
+    private View pbLoading;
+    private ImageView ivBack;
+    private TextView tvBookingCode;
+    private TextView tvBookingStatus;
+    private TextView tvCreatedAt;
+    private TextView tvCustomerName;
+    private View llRowPhone;
+    private TextView tvCustomerPhone;
+    private TextView tvRoomType;
+    private TextView tvRoomNumber;
+    private TextView tvGuests;
+    private TextView tvCheckIn;
+    private TextView tvCheckOut;
+    private TextView tvNights;
+    private TextView tvSubtotal;
+    private TextView tvServiceFee;
+    private View llRowDiscount;
+    private TextView tvDiscount;
+    private TextView tvVat;
+    private TextView tvTotal;
+    private TextView tvPayMethod;
+    private TextView tvPayStatus;
+    private View llRowPaidAt;
+    private TextView tvPaidAt;
+    private View llRowTxn;
+    private TextView tvTxnRef;
+    private View cvNote;
+    private TextView tvNote;
+
     private BookingDao bookingDao;
     private PaymentDao paymentDao;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        binding = ActivityAdminBookingDetailBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        setContentView(R.layout.activity_admin_booking_detail);
+        layoutRoot = findViewById(R.id.layoutRoot);
+        layoutHeader = findViewById(R.id.layoutHeader);
+        svContent = findViewById(R.id.svContent);
+        pbLoading = findViewById(R.id.pbLoading);
+        ivBack = findViewById(R.id.ivBack);
+        tvBookingCode = findViewById(R.id.tvBookingCode);
+        tvBookingStatus = findViewById(R.id.tvBookingStatus);
+        tvCreatedAt = findViewById(R.id.tvCreatedAt);
+        tvCustomerName = findViewById(R.id.tvCustomerName);
+        llRowPhone = findViewById(R.id.llRowPhone);
+        tvCustomerPhone = findViewById(R.id.tvCustomerPhone);
+        tvRoomType = findViewById(R.id.tvRoomType);
+        tvRoomNumber = findViewById(R.id.tvRoomNumber);
+        tvGuests = findViewById(R.id.tvGuests);
+        tvCheckIn = findViewById(R.id.tvCheckIn);
+        tvCheckOut = findViewById(R.id.tvCheckOut);
+        tvNights = findViewById(R.id.tvNights);
+        tvSubtotal = findViewById(R.id.tvSubtotal);
+        tvServiceFee = findViewById(R.id.tvServiceFee);
+        llRowDiscount = findViewById(R.id.llRowDiscount);
+        tvDiscount = findViewById(R.id.tvDiscount);
+        tvVat = findViewById(R.id.tvVat);
+        tvTotal = findViewById(R.id.tvTotal);
+        tvPayMethod = findViewById(R.id.tvPayMethod);
+        tvPayStatus = findViewById(R.id.tvPayStatus);
+        llRowPaidAt = findViewById(R.id.llRowPaidAt);
+        tvPaidAt = findViewById(R.id.tvPaidAt);
+        llRowTxn = findViewById(R.id.llRowTxn);
+        tvTxnRef = findViewById(R.id.tvTxnRef);
+        cvNote = findViewById(R.id.cvNote);
+        tvNote = findViewById(R.id.tvNote);
 
         setupInsets();
-        binding.ivBack.setOnClickListener(v -> finish());
+        ivBack.setOnClickListener(v -> finish());
 
         int bookingId = getIntent() != null
                 ? getIntent().getIntExtra(IntentKeys.EXTRA_BOOKING_ID, -1) : -1;
@@ -66,28 +127,28 @@ public class AdminBookingDetailActivity extends AppCompatActivity {
         WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView())
                 .setAppearanceLightStatusBars(false); // header navy → icon trạng thái màu sáng
 
-        final int headerTop = binding.layoutHeader.getPaddingTop();
-        final int scrollBottom = binding.svContent.getPaddingBottom();
-        ViewCompat.setOnApplyWindowInsetsListener(binding.layoutRoot, (v, insets) -> {
+        final int headerTop = layoutHeader.getPaddingTop();
+        final int scrollBottom = svContent.getPaddingBottom();
+        ViewCompat.setOnApplyWindowInsetsListener(layoutRoot, (v, insets) -> {
             Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            binding.layoutHeader.setPadding(binding.layoutHeader.getPaddingLeft(),
+            layoutHeader.setPadding(layoutHeader.getPaddingLeft(),
                     headerTop + bars.top,
-                    binding.layoutHeader.getPaddingRight(),
-                    binding.layoutHeader.getPaddingBottom());
-            binding.svContent.setPadding(binding.svContent.getPaddingLeft(),
-                    binding.svContent.getPaddingTop(),
-                    binding.svContent.getPaddingRight(),
+                    layoutHeader.getPaddingRight(),
+                    layoutHeader.getPaddingBottom());
+            svContent.setPadding(svContent.getPaddingLeft(),
+                    svContent.getPaddingTop(),
+                    svContent.getPaddingRight(),
                     scrollBottom + bars.bottom);
             return insets;
         });
-        ViewCompat.requestApplyInsets(binding.layoutRoot);
+        ViewCompat.requestApplyInsets(layoutRoot);
     }
 
     // ---------------- TẢI DỮ LIỆU (chạy nền) ----------------
 
     private void loadDetail(int bookingId) {
-        binding.pbLoading.setVisibility(View.VISIBLE);
-        binding.svContent.setVisibility(View.GONE);
+        pbLoading.setVisibility(View.VISIBLE);
+        svContent.setVisibility(View.GONE);
 
         AppExecutors.io(() -> {
             BookingWithDetail detail = null;
@@ -104,7 +165,7 @@ public class AdminBookingDetailActivity extends AppCompatActivity {
             final boolean fFailed = failed;
 
             AppExecutors.runOnUiSafe(this, () -> {
-                binding.pbLoading.setVisibility(View.GONE);
+                pbLoading.setVisibility(View.GONE);
                 if (fFailed) {
                     Toast.makeText(this, R.string.admin_booking_load_error, Toast.LENGTH_SHORT).show();
                     finish();
@@ -116,7 +177,7 @@ public class AdminBookingDetailActivity extends AppCompatActivity {
                     return;
                 }
                 bind(fDetail, fPayment);
-                binding.svContent.setVisibility(View.VISIBLE);
+                svContent.setVisibility(View.VISIBLE);
             });
         });
     }
@@ -127,41 +188,41 @@ public class AdminBookingDetailActivity extends AppCompatActivity {
         Booking b = d.getBooking();
 
         // Khối 1: mã đơn + trạng thái + thời điểm đặt
-        binding.tvBookingCode.setText(PriceUtils.displayCode(b.getBookingCode()));
-        StatusUtils.applyBookingStatus(binding.tvBookingStatus, b.getBookingStatus());
-        binding.tvCreatedAt.setText(getString(R.string.admin_booking_detail_created_at,
+        tvBookingCode.setText(PriceUtils.displayCode(b.getBookingCode()));
+        StatusUtils.applyBookingStatus(tvBookingStatus, b.getBookingStatus());
+        tvCreatedAt.setText(getString(R.string.admin_booking_detail_created_at,
                 formatDateTime(b.getCreatedAt())));
 
         // Khối 2: khách hàng (SĐT trống thì ẩn dòng)
-        binding.tvCustomerName.setText(orDash(d.getCustomerName()));
+        tvCustomerName.setText(orDash(d.getCustomerName()));
         String phone = d.getCustomerPhone();
         boolean hasPhone = phone != null && !phone.trim().isEmpty();
-        binding.llRowPhone.setVisibility(hasPhone ? View.VISIBLE : View.GONE);
-        if (hasPhone) binding.tvCustomerPhone.setText(phone);
+        llRowPhone.setVisibility(hasPhone ? View.VISIBLE : View.GONE);
+        if (hasPhone) tvCustomerPhone.setText(phone);
 
         // Khối 3: phòng
-        binding.tvRoomType.setText(orDash(d.getTypeName()));
+        tvRoomType.setText(orDash(d.getTypeName()));
         String roomNumber = d.getRoomNumber();
-        binding.tvRoomNumber.setText(roomNumber == null || roomNumber.isEmpty()
+        tvRoomNumber.setText(roomNumber == null || roomNumber.isEmpty()
                 ? getString(R.string.admin_booking_no_room) : roomNumber);
-        binding.tvGuests.setText(getString(R.string.admin_booking_detail_guests_value, b.getNumGuests()));
+        tvGuests.setText(getString(R.string.admin_booking_detail_guests_value, b.getNumGuests()));
 
         // Khối 4: lưu trú
-        binding.tvCheckIn.setText(weekdayDate(b.getCheckInDate()));
-        binding.tvCheckOut.setText(weekdayDate(b.getCheckOutDate()));
-        binding.tvNights.setText(getString(R.string.admin_booking_detail_nights_value, b.getNumNights()));
+        tvCheckIn.setText(weekdayDate(b.getCheckInDate()));
+        tvCheckOut.setText(weekdayDate(b.getCheckOutDate()));
+        tvNights.setText(getString(R.string.admin_booking_detail_nights_value, b.getNumNights()));
 
         // Khối 5: tiền (giảm giá = 0 thì ẩn dòng)
-        binding.tvSubtotal.setText(PriceUtils.formatVnd(b.getRoomSubtotal()));
-        binding.tvServiceFee.setText(PriceUtils.formatVnd(b.getServiceFee()));
+        tvSubtotal.setText(PriceUtils.formatVnd(b.getRoomSubtotal()));
+        tvServiceFee.setText(PriceUtils.formatVnd(b.getServiceFee()));
         boolean hasDiscount = b.getDiscountAmount() > 0;
-        binding.llRowDiscount.setVisibility(hasDiscount ? View.VISIBLE : View.GONE);
+        llRowDiscount.setVisibility(hasDiscount ? View.VISIBLE : View.GONE);
         if (hasDiscount) {
-            binding.tvDiscount.setText(getString(R.string.admin_booking_detail_discount_value,
+            tvDiscount.setText(getString(R.string.admin_booking_detail_discount_value,
                     PriceUtils.formatVnd(b.getDiscountAmount())));
         }
-        binding.tvVat.setText(PriceUtils.formatVnd(b.getVatAmount()));
-        binding.tvTotal.setText(PriceUtils.formatVnd(b.getTotalAmount()));
+        tvVat.setText(PriceUtils.formatVnd(b.getVatAmount()));
+        tvTotal.setText(PriceUtils.formatVnd(b.getTotalAmount()));
 
         // Khối 6: thanh toán
         bindPayment(p);
@@ -169,22 +230,22 @@ public class AdminBookingDetailActivity extends AppCompatActivity {
         // Khối 7: ghi chú / lý do từ chối (chỉ hiện khi có nội dung)
         String note = b.getNote();
         boolean hasNote = note != null && !note.trim().isEmpty();
-        binding.cvNote.setVisibility(hasNote ? View.VISIBLE : View.GONE);
-        if (hasNote) binding.tvNote.setText(note.trim());
+        cvNote.setVisibility(hasNote ? View.VISIBLE : View.GONE);
+        if (hasNote) tvNote.setText(note.trim());
     }
 
     private void bindPayment(@Nullable Payment p) {
         if (p == null) {
             // Đơn chưa có bản ghi thanh toán
-            binding.tvPayMethod.setText(R.string.admin_booking_detail_empty_value);
+            tvPayMethod.setText(R.string.admin_booking_detail_empty_value);
             setPayBadge(R.string.admin_booking_detail_pay_none,
                     R.color.muted, R.drawable.bg_status_orange);
-            binding.llRowPaidAt.setVisibility(View.GONE);
-            binding.llRowTxn.setVisibility(View.GONE);
+            llRowPaidAt.setVisibility(View.GONE);
+            llRowTxn.setVisibility(View.GONE);
             return;
         }
 
-        binding.tvPayMethod.setText(methodLabel(p.getMethod()));
+        tvPayMethod.setText(methodLabel(p.getMethod()));
 
         String status = p.getPaymentStatus();
         boolean paid = "paid".equals(status);
@@ -201,19 +262,19 @@ public class AdminBookingDetailActivity extends AppCompatActivity {
 
         // Thời điểm thanh toán: chỉ hiện khi đã thanh toán và có mốc thời gian
         boolean showPaidAt = paid && p.getPaidAt() > 0;
-        binding.llRowPaidAt.setVisibility(showPaidAt ? View.VISIBLE : View.GONE);
-        if (showPaidAt) binding.tvPaidAt.setText(formatDateTime(p.getPaidAt()));
+        llRowPaidAt.setVisibility(showPaidAt ? View.VISIBLE : View.GONE);
+        if (showPaidAt) tvPaidAt.setText(formatDateTime(p.getPaidAt()));
 
         // Mã giao dịch: ẩn nếu trống (đơn tiền mặt chưa thu)
         String txn = p.getTxnRef();
         boolean hasTxn = txn != null && !txn.trim().isEmpty()
                 && !("cash".equals(p.getMethod()) && !paid);
-        binding.llRowTxn.setVisibility(hasTxn ? View.VISIBLE : View.GONE);
-        if (hasTxn) binding.tvTxnRef.setText(txn);
+        llRowTxn.setVisibility(hasTxn ? View.VISIBLE : View.GONE);
+        if (hasTxn) tvTxnRef.setText(txn);
     }
 
     private void setPayBadge(int textRes, int colorRes, int bgRes) {
-        TextView tv = binding.tvPayStatus;
+        TextView tv = tvPayStatus;
         tv.setText(textRes);
         tv.setTextColor(ContextCompat.getColor(this, colorRes));
         tv.setBackgroundResource(bgRes);
@@ -244,11 +305,5 @@ public class AdminBookingDetailActivity extends AppCompatActivity {
     private String orDash(@Nullable String s) {
         return s == null || s.trim().isEmpty()
                 ? getString(R.string.admin_booking_detail_empty_value) : s;
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        binding = null;
     }
 }

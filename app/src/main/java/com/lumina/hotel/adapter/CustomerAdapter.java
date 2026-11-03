@@ -5,9 +5,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.widget.ImageView;
+import android.widget.TextView;
 
 import com.lumina.hotel.R;
-import com.lumina.hotel.databinding.ItemCustomerBinding;
 import com.lumina.hotel.model.CustomerStat;
 import com.lumina.hotel.util.PriceUtils;
 
@@ -49,27 +50,46 @@ public class CustomerAdapter extends BaseAdapter {
         return items.get(position).getUser().getId();
     }
 
+    /** Giữ sẵn các view của một item để không phải findViewById lại mỗi lần cuộn. */
+    static class ViewHolder {
+        TextView tvAvatar;
+        TextView tvCustomerName;
+        TextView tvCustomerContact;
+        TextView tvBookingCount;
+        TextView tvTotalSpent;
+        TextView tvVipBadge;
+        ImageView ivVipStar;
+    }
+
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-        ItemCustomerBinding binding;
+        ViewHolder holder;
 
         if (convertView == null) {
-            binding = ItemCustomerBinding.inflate(
-                    LayoutInflater.from(parent.getContext()), parent, false);
-            convertView = binding.getRoot();
-            convertView.setTag(binding);
+            convertView = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_customer, parent, false);
+
+            holder = new ViewHolder();
+            holder.tvAvatar = convertView.findViewById(R.id.tvAvatar);
+            holder.tvCustomerName = convertView.findViewById(R.id.tvCustomerName);
+            holder.tvCustomerContact = convertView.findViewById(R.id.tvCustomerContact);
+            holder.tvBookingCount = convertView.findViewById(R.id.tvBookingCount);
+            holder.tvTotalSpent = convertView.findViewById(R.id.tvTotalSpent);
+            holder.tvVipBadge = convertView.findViewById(R.id.tvVipBadge);
+            holder.ivVipStar = convertView.findViewById(R.id.ivVipStar);
+            convertView.setTag(holder);
         } else {
-            binding = (ItemCustomerBinding) convertView.getTag();
+            holder = (ViewHolder) convertView.getTag();
         }
 
-        bind(binding, getItem(position));
+        bind(convertView, holder, getItem(position));
         return convertView;
     }
 
-    private void bind(ItemCustomerBinding binding, CustomerStat stat) {
-        binding.tvAvatar.setText(stat.getUser().getInitial());
-        binding.tvCustomerName.setText(stat.getUser().getFullName());
-        Context context = binding.getRoot().getContext();
+    private void bind(View root, ViewHolder holder, CustomerStat stat) {
+        holder.tvAvatar.setText(stat.getUser().getInitial());
+        holder.tvCustomerName.setText(stat.getUser().getFullName());
+        Context context = root.getContext();
 
         String phone = cleanContact(stat.getUser().getPhone());
         String email = cleanContact(stat.getUser().getEmail());
@@ -83,17 +103,17 @@ public class CustomerAdapter extends BaseAdapter {
         } else {
             contact = context.getString(R.string.admin_customer_contact_empty);
         }
-        binding.tvCustomerContact.setText(contact);
+        holder.tvCustomerContact.setText(contact);
 
-        binding.tvBookingCount.setText(
+        holder.tvBookingCount.setText(
                 context.getString(R.string.customer_booking_count, stat.getTotalBookings()));
-        binding.tvTotalSpent.setText(PriceUtils.formatVnd(stat.getTotalSpent()));
+        holder.tvTotalSpent.setText(PriceUtils.formatVnd(stat.getTotalSpent()));
 
         boolean vip = stat.getUser().isVip();
-        binding.tvVipBadge.setVisibility(vip ? View.VISIBLE : View.GONE);
-        binding.ivVipStar.setVisibility(vip ? View.VISIBLE : View.GONE);
+        holder.tvVipBadge.setVisibility(vip ? View.VISIBLE : View.GONE);
+        holder.ivVipStar.setVisibility(vip ? View.VISIBLE : View.GONE);
 
-        binding.getRoot().setOnClickListener(v -> {
+        root.setOnClickListener(v -> {
             if (listener != null) listener.onCustomerClick(stat);
         });
     }

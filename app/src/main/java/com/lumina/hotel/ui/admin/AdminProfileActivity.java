@@ -2,6 +2,9 @@ package com.lumina.hotel.ui.admin;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.ImageButton;
+import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -9,9 +12,9 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.lumina.hotel.R;
-import com.lumina.hotel.databinding.ActivityAdminProfileBinding;
 import com.lumina.hotel.ui.customer.LoginActivity;
 import com.lumina.hotel.util.SessionManager;
 
@@ -22,17 +25,27 @@ import com.lumina.hotel.util.SessionManager;
  */
 public class AdminProfileActivity extends AppCompatActivity {
 
-    private ActivityAdminProfileBinding binding;
+    private TextView tvProfileName;
+    private TextView tvProfileEmail;
+    private TextView tvProfileAvatarInitial;
+    private ImageButton btnBack;
+    private MaterialButton btnLogout;
     private SessionManager sessionManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
-        binding = ActivityAdminProfileBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        setContentView(R.layout.activity_admin_profile);
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (v, insets) -> {
+        tvProfileName = findViewById(R.id.tvProfileName);
+        tvProfileEmail = findViewById(R.id.tvProfileEmail);
+        tvProfileAvatarInitial = findViewById(R.id.tvProfileAvatarInitial);
+        btnBack = findViewById(R.id.btnBack);
+        btnLogout = findViewById(R.id.btnLogout);
+
+        View rootView = findViewById(android.R.id.content);
+        ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, insets) -> {
             Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
             return insets;
@@ -41,12 +54,12 @@ public class AdminProfileActivity extends AppCompatActivity {
         sessionManager = new SessionManager(this);
 
         String fullName = sessionManager.getFullName();
-        binding.tvProfileName.setText(fullName);
-        binding.tvProfileEmail.setText(sessionManager.getEmail());
-        binding.tvProfileAvatarInitial.setText(initialOf(fullName));
+        tvProfileName.setText(fullName);
+        tvProfileEmail.setText(sessionManager.getEmail());
+        tvProfileAvatarInitial.setText(initialOf(fullName));
 
-        binding.btnBack.setOnClickListener(v -> finish());
-        binding.btnLogout.setOnClickListener(v -> confirmLogout());
+        btnBack.setOnClickListener(v -> finish());
+        btnLogout.setOnClickListener(v -> confirmLogout());
     }
 
     private void confirmLogout() {
