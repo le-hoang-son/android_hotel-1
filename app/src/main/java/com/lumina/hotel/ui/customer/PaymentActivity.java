@@ -30,6 +30,7 @@ import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.lumina.hotel.R;
+import com.lumina.hotel.data.DbContract.BookingStatus;
 import com.lumina.hotel.data.dao.BookingDao;
 import com.lumina.hotel.data.dao.PromotionDao;
 import com.lumina.hotel.data.dao.RoomTypeDao;
@@ -528,14 +529,23 @@ public class PaymentActivity extends AppCompatActivity {
             b.setVatAmount(vat);
             b.setDiscountAmount(discount);
             b.setTotalAmount(total);
-            b.setBookingStatus("confirmed");
+            // Tiền mặt: chờ admin xác nhận (pending). Trực tuyến: đã trả tiền nên xác nhận luôn.
+            b.setBookingStatus("cash".equals(method)
+                    ? BookingStatus.PENDING : BookingStatus.CONFIRMED);
             long bookingId = txnRef != null
                     ? bookingDao.createBooking(b, method, txnRef)
                     : bookingDao.createBooking(b, method);
 
             AppExecutors.runOnUiSafe(this, () -> {
                 pbLoading.setVisibility(View.GONE);
-                if (bookingId == -1) {
+                if (bookingId == BookingDao.RESULT_SOLD_OUT) {
+                    // Có người vừa đặt mất phòng cuối trong lúc khách đang thanh toán.
+                    btnPayNow.setEnabled(true);
+                    Snackbar.make(rootView, R.string.room_detail_sold_out_note,
+                            Snackbar.LENGTH_LONG).setAnchorView(layoutBottomBar).show();
+                    return;
+                }
+                if (bookingId <= 0) {
                     btnPayNow.setEnabled(true);
                     Toast.makeText(this, R.string.feature_not_ready, Toast.LENGTH_SHORT).show();
                     return;

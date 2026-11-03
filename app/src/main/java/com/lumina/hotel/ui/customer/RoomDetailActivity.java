@@ -243,6 +243,8 @@ public class RoomDetailActivity extends AppCompatActivity {
                 bindAmenities(amenities);
                 bindReviewSummary(t, starCounts);
                 bindReviewList(reviews);
+                // Chỉ hiện "Xem tất cả" khi còn đánh giá chưa hiển thị (đang chỉ show 2 cái mới nhất).
+                btnSeeAllReviews.setVisibility(t.getReviewCount() > 2 ? View.VISIBLE : View.GONE);
                 bindFavoriteIcon();
                 bindBookButton(t, overlappingFinal);
                 setupImages(t);
@@ -473,6 +475,20 @@ public class RoomDetailActivity extends AppCompatActivity {
         }
     }
 
+    /** Nút "Xem tất cả": nạp hết đánh giá của loại phòng này vào danh sách ngay trong trang. */
+    private void expandAllReviews() {
+        if (roomType == null) return;
+        final int typeId = roomType.getId();
+        btnSeeAllReviews.setEnabled(false); // chặn bấm liên tục khi đang tải
+        AppExecutors.io(() -> {
+            List<Review> all = reviewDao.getAllByRoomType(typeId);
+            AppExecutors.runOnUiSafe(this, () -> {
+                bindReviewList(all);
+                btnSeeAllReviews.setVisibility(View.GONE);
+            });
+        });
+    }
+
     /* ================== YÊU THÍCH ================== */
 
     private void bindFavoriteIcon() {
@@ -579,12 +595,6 @@ public class RoomDetailActivity extends AppCompatActivity {
         btnBack.setOnClickListener(v -> finish());
         btnFavorite.setOnClickListener(v -> toggleFavorite());
         btnBookNow.setOnClickListener(v -> onBookNowClicked());
-        btnSeeAllReviews.setOnClickListener(v -> showNotReady());
-    }
-
-    private void showNotReady() {
-        Snackbar.make(rootView, R.string.feature_not_ready, Snackbar.LENGTH_SHORT)
-                .setAnchorView(layoutBottomBar)
-                .show();
+        btnSeeAllReviews.setOnClickListener(v -> expandAllReviews());
     }
 }

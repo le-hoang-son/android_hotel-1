@@ -293,6 +293,7 @@ public class AdminBookingFragment extends Fragment implements AdminBookingAdapte
             List<BookingWithDetail> bookings = new ArrayList<>();
             boolean failed = false;
             try {
+                bookingDao.cancelNoShows(); // dọn đơn confirmed quá ngày nhận phòng (khách không đến)
                 counts = bookingDao.countByStatus(filter);
                 bookings.addAll(bookingDao.getAllWithDetail(currentFilter, filter));
             } catch (Exception e) {
@@ -501,16 +502,22 @@ public class AdminBookingFragment extends Fragment implements AdminBookingAdapte
 
     private void doCheckIn(int bookingId, int roomId) {
         executor.execute(() -> {
-            boolean ok;
+            int result;
             try {
-                ok = bookingDao.checkIn(bookingId, roomId);
+                result = bookingDao.checkIn(bookingId, roomId);
             } catch (Exception e) {
-                ok = false;
+                result = BookingDao.CHECKIN_FAILED;
             }
-            final boolean fOk = ok;
+            final int fResult = result;
             mainHandler.post(() -> {
                 if (rootView == null) return;
-                showMessage(fOk ? R.string.admin_booking_checkin_success : R.string.admin_booking_checkin_error);
+                if (fResult == BookingDao.CHECKIN_OK) {
+                    showMessage(R.string.admin_booking_checkin_success);
+                } else if (fResult == BookingDao.CHECKIN_TOO_EARLY) {
+                    showMessage(R.string.admin_booking_checkin_too_early);
+                } else {
+                    showMessage(R.string.admin_booking_checkin_error);
+                }
                 loadData();
             });
         });

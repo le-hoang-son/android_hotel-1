@@ -26,15 +26,28 @@ public class ReviewDao {
 
     /** Vài đánh giá mới nhất của một loại phòng, kèm tên người đánh giá. */
     public List<Review> getByRoomType(int typeId, int limit) {
+        return queryReviews(
+                "SELECT r.*, u.full_name AS reviewer_name " +
+                "FROM reviews r JOIN users u ON u.id = r.user_id " +
+                "WHERE r.room_type_id = ? ORDER BY r.created_at DESC LIMIT ?",
+                new String[]{ String.valueOf(typeId), String.valueOf(limit) });
+    }
+
+    /** TOÀN BỘ đánh giá của một loại phòng, mới nhất trước — dùng cho nút "Xem tất cả". */
+    public List<Review> getAllByRoomType(int typeId) {
+        return queryReviews(
+                "SELECT r.*, u.full_name AS reviewer_name " +
+                "FROM reviews r JOIN users u ON u.id = r.user_id " +
+                "WHERE r.room_type_id = ? ORDER BY r.created_at DESC",
+                new String[]{ String.valueOf(typeId) });
+    }
+
+    private List<Review> queryReviews(String sql, String[] args) {
         List<Review> list = new ArrayList<>();
         SQLiteDatabase db = helper.getReadableDatabase();
         Cursor c = null;
         try {
-            c = db.rawQuery(
-                    "SELECT r.*, u.full_name AS reviewer_name " +
-                    "FROM reviews r JOIN users u ON u.id = r.user_id " +
-                    "WHERE r.room_type_id = ? ORDER BY r.created_at DESC LIMIT ?",
-                    new String[]{ String.valueOf(typeId), String.valueOf(limit) });
+            c = db.rawQuery(sql, args);
             while (c.moveToNext()) list.add(cursorToReview(c));
         } finally {
             if (c != null) c.close();

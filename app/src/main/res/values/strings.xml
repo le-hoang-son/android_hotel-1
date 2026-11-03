@@ -396,6 +396,7 @@
     <string name="admin_booking_checkin_title">Chọn phòng nhận</string>
     <string name="admin_booking_checkin_empty">Không còn phòng trống thuộc loại này</string>
     <string name="admin_booking_checkin_success">Đã nhận phòng cho khách</string>
+    <string name="admin_booking_checkin_too_early">Chưa tới ngày nhận phòng, không thể nhận phòng</string>
     <string name="admin_booking_checkin_error">Không cập nhật được, vui lòng thử lại</string>
     <!-- Check-out -->
     <string name="admin_booking_checkout_title">Xác nhận trả phòng?</string>
@@ -589,9 +590,11 @@
     <!-- Dialog "Hủy đơn đặt phòng?" -->
     <string name="dialog_cancel_booking_title">Hủy đơn đặt phòng?</string>
     <string name="dialog_cancel_booking_message">Bạn có chắc muốn hủy đơn #%1$s? Thao tác này không thể hoàn tác.</string>
+    <string name="dialog_cancel_booking_policy">Chính sách hoàn tiền: hoàn 100% nếu hủy trước ngày nhận phòng; không hoàn nếu hủy trong ngày nhận phòng trở đi.</string>
     <string name="dialog_cancel_booking_negative">Không</string>
     <string name="dialog_cancel_booking_positive">Hủy đơn</string>
     <string name="snackbar_cancel_success">Đã hủy đơn</string>
+    <string name="snackbar_cancel_refunded">Đã hủy đơn và hoàn tiền cho bạn</string>
     <string name="snackbar_cancel_failed">Không thể hủy đơn này</string>
 
     <!-- Dialog Đánh giá -->

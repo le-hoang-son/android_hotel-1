@@ -170,6 +170,7 @@ public class MyBookingsFragment extends Fragment implements BookingAdapter.Liste
         srlBookings.setRefreshing(true);
         int userId = session.getUserId();
         executor.execute(() -> {
+            bookingDao.cancelNoShows(); // dọn các đơn confirmed quá ngày nhận phòng (khách không đến)
             List<BookingWithDetail> data = bookingDao.getByUser(userId);
             if (getActivity() == null) return;
             requireActivity().runOnUiThread(() -> {
@@ -234,15 +235,20 @@ public class MyBookingsFragment extends Fragment implements BookingAdapter.Liste
         AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.dialog_cancel_booking_title)
                 .setMessage(getString(R.string.dialog_cancel_booking_message,
-                        item.getBooking().getBookingCode()))
+                        item.getBooking().getBookingCode())
+                        + "\n\n" + getString(R.string.dialog_cancel_booking_policy))
                 .setNegativeButton(R.string.dialog_cancel_booking_negative, null)
                 .setPositiveButton(R.string.dialog_cancel_booking_positive, (d, w) ->
                         executor.execute(() -> {
-                            int rows = bookingDao.cancelByCustomer(item.getBooking().getId());
+                            int result = bookingDao.cancelByCustomer(item.getBooking().getId());
                             if (getActivity() == null) return;
                             requireActivity().runOnUiThread(() -> {
                                 if (rootView == null) return;
-                                if (rows > 0) {
+                                if (result == BookingDao.CANCEL_REFUNDED) {
+                                    Snackbar.make(rootView, R.string.snackbar_cancel_refunded,
+                                            Snackbar.LENGTH_LONG).show();
+                                    loadBookings();
+                                } else if (result == BookingDao.CANCEL_OK) {
                                     Snackbar.make(rootView, R.string.snackbar_cancel_success,
                                             Snackbar.LENGTH_SHORT).show();
                                     loadBookings();

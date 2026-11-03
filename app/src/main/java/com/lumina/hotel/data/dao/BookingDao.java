@@ -30,6 +30,28 @@ import java.util.Map;
  */
 public class BookingDao {
 
+    /** createBooking: lỗi chung, không tạo được đơn. */
+    public static final long RESULT_ERROR = -1;
+    /** createBooking: hết phòng cho khoảng ngày đã chọn (chốt lại trong giao dịch). */
+    public static final long RESULT_SOLD_OUT = -2;
+
+    /** checkIn: nhận phòng thành công. */
+    public static final int CHECKIN_OK = 1;
+    /** checkIn: chưa tới ngày nhận phòng, không cho nhận sớm. */
+    public static final int CHECKIN_TOO_EARLY = -1;
+    /** checkIn: thất bại (đơn không còn "confirmed" hoặc lỗi ghi). */
+    public static final int CHECKIN_FAILED = 0;
+
+    /** Huỷ đơn xong nhưng không phát sinh hoàn tiền. */
+    public static final int CANCEL_OK = 1;
+    /** Huỷ đơn xong và đã đánh dấu hoàn tiền cho khách. */
+    public static final int CANCEL_REFUNDED = 2;
+    /** Không huỷ được (đơn đã đổi trạng thái từ trước). */
+    public static final int CANCEL_FAILED = 0;
+
+    private static final String PAY_STATUS_PAID     = "paid";
+    private static final String PAY_STATUS_REFUNDED = "refunded";
+
     private final DatabaseHelper helper;
 
     public BookingDao(Context context) {
@@ -51,7 +73,11 @@ public class BookingDao {
      * hoặc đã hoàn tất thì phòng đã được giải phóng.
      */
     public int getOverlappingCount(int typeId, long checkIn, long checkOut) {
-        SQLiteDatabase db = helper.getReadableDatabase();
+        return countOverlapping(helper.getReadableDatabase(), typeId, checkIn, checkOut);
+    }
+
+    /** Bản dùng chung nhận sẵn {@code db} để gọi được cả BÊN TRONG giao dịch tạo đơn. */
+    private int countOverlapping(SQLiteDatabase db, int typeId, long checkIn, long checkOut) {
         Cursor c = null;
         try {
             c = db.rawQuery(
@@ -62,6 +88,18 @@ public class BookingDao {
                     new String[]{ String.valueOf(typeId),
                             String.valueOf(DateUtils.atStartOfDay(checkOut)),
                             String.valueOf(DateUtils.atStartOfDay(checkIn)) });
+            return c.moveToFirst() ? c.getInt(0) : 0;
+        } finally {
+            if (c != null) c.close();
+        }
+    }
+
+    /** Tổng số phòng vật lý của một loại (0 nếu không tìm thấy loại). */
+    private int totalRoomsOf(SQLiteDatabase db, int typeId) {
+        Cursor c = null;
+        try {
+            c = db.rawQuery("SELECT total_rooms FROM room_types WHERE id = ? LIMIT 1",
+                    new String[]{ String.valueOf(typeId) });
             return c.moveToFirst() ? c.getInt(0) : 0;
         } finally {
             if (c != null) c.close();
@@ -84,7 +122,11 @@ public class BookingDao {
      * Tạo đơn mới kèm bản ghi thanh toán, trong một giao dịch.
      * Nếu bất kỳ bước nào hỏng thì toàn bộ bị huỷ, không để lại đơn mồ côi.
      *
-     * @return id đơn vừa tạo, hoặc -1 nếu thất bại.
+     * Tồn phòng được chốt lại NGAY TRONG giao dịch (không tin vào kiểm tra ở UI),
+     * nhờ vậy hai khách cùng đặt phòng cuối thì chỉ một đơn qua được.
+     *
+     * @return id đơn vừa tạo; {@link #RESULT_SOLD_OUT} nếu hết phòng;
+     *         {@link #RESULT_ERROR} nếu thất bại.
      */
     /** Giữ nguyên cho MoMo/Thẻ/Tiền mặt — txn_ref tự sinh như cũ. */
     public long createBooking(Booking b, String paymentMethod) {
@@ -100,6 +142,14 @@ public class BookingDao {
         SQLiteDatabase db = helper.getWritableDatabase();
         db.beginTransaction();
         try {
+            // Chốt tồn phòng ngay trong giao dịch — chặn overbooking khi nhiều đơn cùng lúc.
+            int totalRooms = totalRoomsOf(db, b.getRoomTypeId());
+            if (totalRooms > 0
+                    && countOverlapping(db, b.getRoomTypeId(), b.getCheckInDate(), b.getCheckOutDate())
+                        >= totalRooms) {
+                return RESULT_SOLD_OUT;
+            }
+
             long now = System.currentTimeMillis();
             if (b.getCreatedAt() <= 0) b.setCreatedAt(now);
             String code = uniqueCode(db, PriceUtils.generateBookingCode(b.getCreatedAt()));
@@ -260,35 +310,103 @@ public class BookingDao {
                 new String[]{ String.valueOf(bookingId), BookingStatus.PENDING });
     }
 
-    /** Khách tự huỷ đơn. Chỉ cho phép khi đơn còn ở trạng thái chờ/đã xác nhận. */
-    public int cancelByCustomer(int bookingId) {
-        SQLiteDatabase db = helper.getWritableDatabase();
-        ContentValues v = new ContentValues();
-        v.put(BookingTable.BOOKING_STATUS, BookingStatus.CANCELLED);
-        return db.update(BookingTable.TABLE_NAME, v,
-                "id = ? AND booking_status IN ('pending','confirmed')",
-                new String[]{ String.valueOf(bookingId) });
+    /**
+     * Chính sách hủy theo mốc thời gian (so với ngày nhận phòng):
+     *   - Hủy TRƯỚC ngày nhận phòng (còn ≥ 1 ngày): hoàn 100%.
+     *   - Hủy trong ngày nhận phòng trở đi: không hoàn.
+     * @return phần trăm được hoàn (0 hoặc 100).
+     */
+    public static int refundPercent(long checkInDate) {
+        return DateUtils.atStartOfDay(checkInDate) > DateUtils.today() ? 100 : 0;
     }
 
-    /** Admin từ chối đơn, có ghi lý do vào cột note. Chỉ áp dụng khi đơn còn "pending". */
+    /**
+     * Khách tự huỷ đơn và hoàn tiền theo chính sách, tất cả trong MỘT giao dịch.
+     * Chỉ cho phép khi đơn còn "pending" hoặc "confirmed".
+     *
+     * @return {@link #CANCEL_REFUNDED} nếu huỷ được VÀ có hoàn tiền;
+     *         {@link #CANCEL_OK} nếu huỷ được nhưng không hoàn tiền (ngoài mốc hoặc chưa trả tiền);
+     *         {@link #CANCEL_FAILED} nếu không huỷ được.
+     */
+    public int cancelByCustomer(int bookingId) {
+        SQLiteDatabase db = helper.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            long checkIn = bookingCheckInDate(db, bookingId, "booking_status IN ('pending','confirmed')");
+            if (checkIn <= 0) return CANCEL_FAILED;
+
+            ContentValues v = new ContentValues();
+            v.put(BookingTable.BOOKING_STATUS, BookingStatus.CANCELLED);
+            int rows = db.update(BookingTable.TABLE_NAME, v,
+                    "id = ? AND booking_status IN ('pending','confirmed')",
+                    new String[]{ String.valueOf(bookingId) });
+            if (rows == 0) return CANCEL_FAILED;
+
+            // Chỉ hoàn khi khách huỷ đúng mốc được hoàn; chỉ hoàn cho khoản đã thanh toán.
+            int refunded = refundPercent(checkIn) == 100 ? refundPaidPayments(db, bookingId) : 0;
+            db.setTransactionSuccessful();
+            return refunded > 0 ? CANCEL_REFUNDED : CANCEL_OK;
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /**
+     * Admin từ chối đơn: chỉ áp dụng khi đơn còn "pending", ghi lý do vào note
+     * và hoàn lại tiền nếu khách đã trả (lỗi từ phía khách sạn).
+     * @return số dòng đơn được cập nhật.
+     */
     public int rejectBooking(int bookingId, String reason) {
+        SQLiteDatabase db = helper.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            ContentValues v = new ContentValues();
+            v.put(BookingTable.BOOKING_STATUS, BookingStatus.CANCELLED);
+            v.put(BookingTable.NOTE, reason);
+            int rows = db.update(BookingTable.TABLE_NAME, v,
+                    "id = ? AND booking_status = ?",
+                    new String[]{ String.valueOf(bookingId), BookingStatus.PENDING });
+            if (rows == 0) return 0;
+
+            refundPaidPayments(db, bookingId);
+            db.setTransactionSuccessful();
+            return rows;
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /**
+     * Tự động hủy các đơn "confirmed" đã qua ngày nhận phòng mà khách không đến (no-show).
+     * Không hoàn tiền vì lỗi thuộc về khách. Gọi định kỳ khi mở danh sách đơn.
+     * @return số đơn bị hủy.
+     */
+    public int cancelNoShows() {
         SQLiteDatabase db = helper.getWritableDatabase();
         ContentValues v = new ContentValues();
         v.put(BookingTable.BOOKING_STATUS, BookingStatus.CANCELLED);
-        v.put(BookingTable.NOTE, reason);
         return db.update(BookingTable.TABLE_NAME, v,
-                "id = ? AND booking_status = ?",
-                new String[]{ String.valueOf(bookingId), BookingStatus.PENDING });
+                "booking_status = ? AND check_in_date < ?",
+                new String[]{ BookingStatus.CONFIRMED, String.valueOf(DateUtils.today()) });
     }
 
     /**
      * Check-in: gán phòng vật lý cho đơn và đổi trạng thái phòng sang "đang ở".
-     * Chỉ áp dụng khi đơn còn "confirmed". Hai thao tác phải cùng thành công hoặc cùng thất bại.
+     * Chỉ áp dụng khi đơn còn "confirmed" và đã tới ngày nhận phòng.
+     * Hai thao tác phải cùng thành công hoặc cùng thất bại.
+     *
+     * @return {@link #CHECKIN_OK}, {@link #CHECKIN_TOO_EARLY} hoặc {@link #CHECKIN_FAILED}.
      */
-    public boolean checkIn(int bookingId, int roomId) {
+    public int checkIn(int bookingId, int roomId) {
         SQLiteDatabase db = helper.getWritableDatabase();
         db.beginTransaction();
         try {
+            long checkIn = bookingCheckInDate(db, bookingId,
+                    "booking_status = '" + BookingStatus.CONFIRMED + "'");
+            if (checkIn <= 0) return CHECKIN_FAILED;
+            // Không cho nhận phòng trước ngày khách đã đặt.
+            if (DateUtils.atStartOfDay(checkIn) > DateUtils.today()) return CHECKIN_TOO_EARLY;
+
             ContentValues b = new ContentValues();
             b.put(BookingTable.ROOM_ID, roomId);
             b.put(BookingTable.BOOKING_STATUS, BookingStatus.CHECKED_IN);
@@ -303,15 +421,15 @@ public class BookingDao {
 
             if (r1 > 0 && r2 > 0) {
                 db.setTransactionSuccessful();
-                return true;
+                return CHECKIN_OK;
             }
-            return false;
+            return CHECKIN_FAILED;
         } finally {
             db.endTransaction();
         }
     }
 
-    /** Check-out: đơn chuyển sang hoàn tất, phòng chuyển sang "cần dọn".
+    /** Check-out: đơn chuyển sang hoàn tất, phòng được giải phóng về "trống".
      *  Nếu đơn trả bằng tiền mặt và chưa thanh toán, đánh dấu đã thu tiền lúc này. */
     public boolean checkOut(int bookingId, int roomId) {
         SQLiteDatabase db = helper.getWritableDatabase();
@@ -319,17 +437,18 @@ public class BookingDao {
         try {
             ContentValues b = new ContentValues();
             b.put(BookingTable.BOOKING_STATUS, BookingStatus.COMPLETED);
-            int r1 = db.update(BookingTable.TABLE_NAME, b, "id = ?",
-                    new String[]{ String.valueOf(bookingId) });
+            int r1 = db.update(BookingTable.TABLE_NAME, b,
+                    "id = ? AND booking_status = ?",
+                    new String[]{ String.valueOf(bookingId), BookingStatus.CHECKED_IN });
 
             if (roomId > 0) {
                 ContentValues rm = new ContentValues();
-                rm.put("room_status", RoomStatus.CLEANING);
+                rm.put("room_status", RoomStatus.AVAILABLE);
                 db.update("rooms", rm, "id = ?", new String[]{ String.valueOf(roomId) });
             }
 
             ContentValues pay = new ContentValues();
-            pay.put("payment_status", "paid");
+            pay.put("payment_status", PAY_STATUS_PAID);
             pay.put("paid_at", System.currentTimeMillis());
             db.update("payments", pay,
                     "booking_id = ? AND method = 'cash' AND payment_status = 'unpaid'",
@@ -343,6 +462,29 @@ public class BookingDao {
         } finally {
             db.endTransaction();
         }
+    }
+
+    /** Ngày nhận phòng của đơn thoả điều kiện; -1 nếu không tìm thấy. */
+    private long bookingCheckInDate(SQLiteDatabase db, int bookingId, String condition) {
+        Cursor c = null;
+        try {
+            c = db.rawQuery(
+                    "SELECT check_in_date FROM bookings WHERE id = ? AND " + condition + " LIMIT 1",
+                    new String[]{ String.valueOf(bookingId) });
+            return c.moveToFirst() ? c.getLong(0) : -1;
+        } finally {
+            if (c != null) c.close();
+        }
+    }
+
+    /** Đánh dấu hoàn tiền cho các khoản đã thanh toán của đơn; bỏ qua tiền mặt/chưa trả.
+     *  @return số bản ghi payments được đánh dấu hoàn tiền. */
+    private int refundPaidPayments(SQLiteDatabase db, int bookingId) {
+        ContentValues v = new ContentValues();
+        v.put(PaymentTable.PAYMENT_STATUS, PAY_STATUS_REFUNDED);
+        return db.update(PaymentTable.TABLE_NAME, v,
+                "booking_id = ? AND payment_status = ?",
+                new String[]{ String.valueOf(bookingId), PAY_STATUS_PAID });
     }
 
     public int delete(int bookingId) {
